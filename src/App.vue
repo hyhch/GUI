@@ -10,6 +10,9 @@
       <div draggable="true" id = "LED" @dragstart="ledDragstart">
         LED
       </div>
+      <div draggable="true" id = "LED" @dragstart="ledDragstart">
+        TEXTAREA
+      </div>
     </el-col>
     
     <el-col :span="20" style="overflow-x:auto">
