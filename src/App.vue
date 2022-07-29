@@ -1,6 +1,5 @@
 <template>
   <el-row>
-  <div></div>
     <el-col :span="2">
       <!-- <div v-for="(c_item, index) in components" :key="index" draggable="true" @dragstart="c_item.ondragstart($event)">
         {{c_item.name}}
