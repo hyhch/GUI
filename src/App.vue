@@ -31,12 +31,26 @@
 // import { create } from 'domain';
 // import { Button } from 'element-ui';
 
+var elementCount = 1;
+//元素唯一id
 var db = openDatabase('BSHdb', '1.0', 'Test DB', 2 * 1024 * 1024);
+db.transaction(function (context) {  
 
-db.transaction(function (tx) {  
-
-   tx.executeSql('CREATE TABLE IF NOT EXISTS Temp (id unique,type,areaId,elementId)');
-
+  //  tx.executeSql('CREATE TABLE IF NOT EXISTS Temp ("id" INTEGER NOT NULL,"type" INTEGER,"areaId" INTEGER,"elementId" INTEGER,PRIMARY KEY ("id"))');
+   context.executeSql('CREATE TABLE IF NOT EXISTS TemplateList ("id" INTEGER NOT NULL,"name" TEXT,PRIMARY KEY ("id"))');
+   context.executeSql('CREATE TABLE IF NOT EXISTS Button ("id" INTEGER NOT NULL,"name" TEXT,"hwid" TEXT,"areaId" TEXT,"templateId" INTEGER,PRIMARY KEY ("id"))');
+   context.executeSql('CREATE TABLE IF NOT EXISTS LED ("id" INTEGER NOT NULL,"name" TEXT,"hwid" TEXT,"areaId" TEXT,"templateId" INTEGER,PRIMARY KEY ("id"))');
+   //创建表
+  //  context.executeSql('INSERT INTO Button (id, name) VALUES (1, "aaa")');
+  //  context.executeSql('INSERT INTO Button (id, name) VALUES (2, "aaa")');
+  //  context.executeSql('INSERT INTO Button (id, name) VALUES (3, "aaa")');
+  //  context.executeSql('INSERT INTO LED (id, name) VALUES (1, "aaa")');
+  //  context.executeSql('INSERT INTO LED (id, name) VALUES (2, "aaa")');
+  context.executeSql('SELECT MAX(MAX(bt.id),MAX(led.id)) AS max_result FROM Button as bt,LED as led', [], function (context, results) {
+            elementCount = results.rows.item(0).max_result+1;
+            console.log(elementCount);
+          });
+  //取所有表中的id最大值+1作为elementCount值
 });
   export default {
     data() {
@@ -55,7 +69,6 @@ db.transaction(function (tx) {
             ondragstart: () => { this.textDragstart() }
           }
         ],
-        elementCount:1,
         templates: [
           {
             name: "DEMO1",
@@ -90,30 +103,23 @@ db.transaction(function (tx) {
       },
       createBtn(){
         var Btn = new Object;
-        // Btn.id = this.elementCount;
+        Btn.id = elementCount;
         Btn.name = "";
         Btn.hwId = "";
         Btn.type = 1;
-        // this.elementCount++;
+        elementCount++;
         //type属性：1=按钮；2=LED灯
         return Btn;
       },
       createLED(){
         var LED = new Object;
-        // LED.id = this.elementCount;
+        LED.id = elementCount;
         LED.name = "";
         LED.hwId = "";
         LED.type = 2;
-        // this.elementCount++;
+        elementCount++;
         return LED;
       },
-      createDB(index){
-        db.transaction(function (tx) {  
-
-        tx.executeSql('CREATE TABLE IF NOT EXISTS'+index+'(id unique, log)');
-
-        });
-      }
     }
   }
 </script>
