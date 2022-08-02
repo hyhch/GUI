@@ -1,15 +1,16 @@
 <template>
     <div>
         <el-col :span="2">
-        <!-- <div v-for="(c_item, index) in components" :key="index" draggable="true" @dragstart="c_item.ondragstart($event)">
-            {{c_item.name}}
-        </div> -->
-        <div draggable="true" id = "button" @dragstart="buttonDragstart">
-            button
-        </div>
-        <div draggable="true" id = "LED" @dragstart="ledDragstart">
-            LED
-        </div>
+       
+            <div draggable="true" id="button" @dragstart="buttonDragstart">
+                button
+            </div>
+            <div draggable="true" id="LED" @dragstart="ledDragstart">
+                LED
+            </div>
+            <div draggable="true" id="segment" @dragstart="segmentDragstart">
+                segment
+            </div>
         </el-col>
         
         <el-col :span="22" style="overflow-x:auto">
@@ -33,7 +34,7 @@
                     :key="index" :style="gridStyle[index-1]"
                     :id="index-1"
                     @dragenter="ondragenter" @dragover="ondragover($event)" 
-                    @dragleave="ondragleave" @drop="ondrop($event, index, boardType)"
+                    @dragleave="ondragleave" @drop="ondrop($event, index)"
                     @click="ifDialogFormVisible(index)"
                 ></div>
 
@@ -104,9 +105,8 @@
         name: 'templateDemo2',
         data() {
             return {
-
                 boardType: "1",
-
+                dragElementType: 1,
                 //弹窗默认关闭
                 dialogFormVisible: false,
                 totalWidth: 800,
@@ -245,23 +245,14 @@
         },
         methods: {
             buttonDragstart() {
-                let Btn = new Object;
-                Btn.id = elementCount;
-                Btn.name = "";
-                Btn.hwId = "";
                 //type属性：1=按钮；2=LED灯
-                Btn.type = 1;
-                elementCount++;
-                sessionStorage.setItem("element", JSON.stringify(Btn));
+                this.dragElementType = 1;
             },
             ledDragstart() {
-                let LED = new Object;
-                LED.id = elementCount;
-                LED.name = "";
-                LED.hwId = "";
-                LED.type = 2;
-                elementCount++;
-                sessionStorage.setItem("element", JSON.stringify(LED));
+                this.dragElementType = 2;
+            },
+            segmentDragstart() {
+                
             },
             testAxios() {
                 // 向后端传递组件参数
@@ -295,74 +286,82 @@
             ondragleave() {
                 //this.style.borderColor='#aaaaaa'
             },
-             ondrop(event, index,boardType)  {
+            putButton(index) {
+                let boardType = this.boardType
+                let elementId = elementCount
+                    // 放置一个Button
+                db.transaction(function (context) {  
+                    context.executeSql('INSERT INTO Button (id,areaId,templateId,boardType) VALUES (?,?,?,?)',[elementId,index-1,0,boardType]);
+                })
+                // button覆盖的index
+                let rangeIndex = [index-1, index, index+this.rowGridNum-1, index+this.rowGridNum]
+                for(let i = 0 ; i < rangeIndex.length ; ++i) {
+                    // 如果覆盖位置上已存在其它组件，就将背景颜色设为mixColor，否则设为buttonColor
+                    let curBackground = this.gridStyle[rangeIndex[i]].background
+                    if (curBackground == this.backgroundColor) {
+                        this.gridStyle[rangeIndex[i]].background = this.buttonColor
+                    } else {
+                        this.gridStyle[rangeIndex[i]].background = this.mixColor
+                    }
+
+                    //已有元素在上面的格子变成可点击的手型 
+                    this.gridStyle[rangeIndex[i]].cursor="pointer"
+
+                    if (this.gridElementOverlap[rangeIndex[i]] == null) {
+                        this.gridElementOverlap[rangeIndex[i]] = {
+                            button: [],
+                            led: []
+                        }
+                    }
+                    this.gridElementOverlap[rangeIndex[i]]['button'].push(
+                        elementId
+                    )
+                }
+
+                this.button[elementId] = {
+                    name: '',
+                    hwId: ''
+                }
+
+                elementCount++
+            },
+            putLed(index) {
+                let boardType = this.boardType
+                let elementId = elementCount
+                //将LED插入数据库
+                db.transaction(function (context) {  
+                    context.executeSql('INSERT INTO LED (id,areaId,templateId,boardType) VALUES (?,?,?,?)',[elementId,index-1,0,boardType]);
+                });
+                this.gridStyle[index-1].cursor = "pointer";
+                document.getElementById(index-1).innerHTML = "<div style = 'background-color:#409EFF;width:50%;height:50%;margin:auto'></div>";
+                //拖动按钮松开后蓝色代表LED
+                if (this.gridElementOverlap[index-1] == null) {
+                    this.gridElementOverlap[index-1] = {
+                        button: [],
+                        led: []
+                    }
+                }
+                this.gridElementOverlap[index-1]['led'].push(
+                    elementId
+                )
+
+                this.led[elementId] = {
+                    name: '',
+                    hwId: ''
+                }
+
+                elementCount++
+            },
+            ondrop(event, index)  {
                 //this.style.borderColor='#aaaaaa';
                 event.preventDefault()
-                let data = JSON.parse(sessionStorage.getItem("element"));
                 //this.style.borderColor='#aaaaaa';
-                console.log(data);
-                switch(data.type){
-                    // 放置一个Button
-                    case 1:{
-                        db.transaction(function (context) {  
-                            context.executeSql('INSERT INTO Button (id,areaId,templateId,boardType) VALUES (?,?,?,?)',[data.id,index-1,0,boardType]);
-                        })
-                        // button覆盖的index
-                        let rangeIndex = [index-1, index, index+this.rowGridNum-1, index+this.rowGridNum]
-                        for(let i = 0 ; i < rangeIndex.length ; ++i) {
-                            // 如果覆盖位置上已存在其它组件，就将背景颜色设为mixColor，否则设为buttonColor
-                            let curBackground = this.gridStyle[rangeIndex[i]].background
-                            if (curBackground == this.backgroundColor) {
-                                this.gridStyle[rangeIndex[i]].background = this.buttonColor
-                            } else {
-                                this.gridStyle[rangeIndex[i]].background = this.mixColor
-                            }
-                            this.gridStyle[rangeIndex[i]].cursor="pointer"
-
-                            if (this.gridElementOverlap[rangeIndex[i]] == null) {
-                                this.gridElementOverlap[rangeIndex[i]] = {
-                                    button: [],
-                                    led: []
-                                }
-                            }
-                            this.gridElementOverlap[rangeIndex[i]]['button'].push(
-                                data.id
-                            )
-                        }
-
-                        //已有元素在上面的格子变成可点击的手型 
-                        this.button[data.id] = {
-                            name: data.name,
-                            hwId: data.hwId
-                        }
-                        
-                        break;
-                    }
-                    // 放置一个led
-                    case 2:{
-                        //将LED插入数据库
-                        db.transaction(function (context) {  
-                            context.executeSql('INSERT INTO LED (id,areaId,templateId,boardType) VALUES (?,?,?,?)',[data.id,index-1,0,boardType]);
-                        });
-                        this.gridStyle[index-1].cursor = "pointer";
-                        document.getElementById(index-1).innerHTML = "<div style = 'background-color:#409EFF;width:50%;height:50%;margin:auto'></div>";
-                        //拖动按钮松开后蓝色代表LED
-                        if (this.gridElementOverlap[index-1] == null) {
-                            this.gridElementOverlap[index-1] = {
-                                button: [],
-                                led: []
-                            }
-                        }
-                        this.gridElementOverlap[index-1]['led'].push(
-                            data.id
-                        )
-
-                        this.led[data.id] = {
-                            name: data.name,
-                            hwId: data.hwId
-                        }
-                        break;
-                    }
+                if (this.dragElementType == 1) {
+                    this.putButton(index)
+                } else if (this.dragElementType == 2) {
+                    this.putLed(index)
+                } else {
+                    console.log('other situations')
                 }
             },
             // 判断是否显示表单，并初始化表单绑定的数据
@@ -508,4 +507,11 @@
         border:1px solid #aaaaaa;
     }
 
+    #segment {
+        width: 88px;
+        height:150px;
+        border:1px solid #aaaaaa;
+    }
+
 </style>
+
