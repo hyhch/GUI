@@ -1,6 +1,10 @@
 <template>
     
     <div id="MainArea" :style="workspaceDivClass">
+    <div :style="radioClass">
+        <el-radio v-model="boardType" label="1" @change="loadBoard()">PS</el-radio>
+        <el-radio v-model="boardType" label="2" @change="loadBoard()">OS</el-radio>
+    </div>
         <div :style="iconDivClass">
             <span>
                 <i class="el-icon-zoom-in" @click="zoomIn"></i>
@@ -16,7 +20,7 @@
             :key="index" :style="gridStyle[index-1]"
             :id="index-1"
             @dragenter="ondragenter" @dragover="ondragover($event)" 
-            @dragleave="ondragleave" @drop="ondrop($event, index)"
+            @dragleave="ondragleave" @drop="ondrop($event, index,boardType)"
             @click="ifDialogFormVisible(index)"
         ></div>
 
@@ -73,13 +77,15 @@
 
 <script>
 
+
 import axios from 'axios';
-    // var db = openDatabase('BSHdb', '1.0', 'Test DB', 2 * 1024 * 1024);
+    var db = openDatabase('BSHdb', '1.0', 'Test DB', 2 * 1024 * 1024);
     export default {
         name: 'templateDemo2',
         data() {
             return {
-               
+                //boardType属性：PS板为1，OS板为2
+                boardType: "1",
                  //弹窗默认关闭
                 dialogFormVisible: false,
                 totalWidth: 800,
@@ -160,8 +166,19 @@ import axios from 'axios';
                     textAlign: 'right',
                     marginRight: '2%',
                     marginBottom: '1%',
-                    marginTop: '1%'
+                    marginTop: '1%',
+                    // display:'inline'
                 },
+
+                //单选面板布局
+                radioClass:{
+                    // display:'inline',
+                    textAlign: 'left',
+                    marginRight: '2%',
+                    marginBottom: '1%',
+                    marginTop: '1%',
+                },
+
                 // 微调网格的布局
                 // offsetWidth会随此处的width改变
                 workspaceDivClass: {
@@ -212,15 +229,17 @@ import axios from 'axios';
         methods: {
             testAxios() {
                 // 向后端传递组件参数
-                let buttonList = []
-                let ledList = []
+                let buttonList = [];
+                let ledList = [];
                 // 生成组件列表
                 for (let buttonId in this.button) {
-                    buttonList.push(this.button[buttonId])
+                    buttonList.push(this.button[buttonId]);
                 }
+                console.log(buttonList);
                 for (let ledId in this.led) {
-                    ledList.push(this.led[ledId])
+                    ledList.push(this.led[ledId]);
                 }
+                console.log(ledList);
                 axios ({
                     method: 'post',
                     url: '/save',
@@ -242,26 +261,30 @@ import axios from 'axios';
             ondragleave() {
                 //this.style.borderColor='#aaaaaa'
             },
-            ondrop(event, index) {
+            ondrop(event, index,boardType) {
                 //this.style.borderColor='#aaaaaa';
-                event.preventDefault()
+                console.log(this.boardType);
+                event.preventDefault();
                 let data = JSON.parse(sessionStorage.getItem("element"));
                 //console.log(data)
                 //this.style.borderColor='#aaaaaa';
                 switch(data.type){
                     // 放置一个Button
                     case 1:{
-                        // button覆盖的index
-                        let rangeIndex = [index-1, index, index+this.rowGridNum-1, index+this.rowGridNum]
+                        // 将button插入数据库
+                        db.transaction(function (context) {  
+                            context.executeSql('INSERT INTO Button (id,areaId,templateId,boardType) VALUES (?,?,?,?)',[data.id,index-1,0,boardType]);
+                        });
+                        let rangeIndex = [index-1, index, index+this.rowGridNum-1, index+this.rowGridNum];
                         for(let i = 0 ; i < rangeIndex.length ; ++i) {
                             // 如果覆盖位置上已存在其它组件，就将背景颜色设为mixColor，否则设为buttonColor
-                            let curBackground = this.gridStyle[rangeIndex[i]].background
+                            let curBackground = this.gridStyle[rangeIndex[i]].background;
                             if (curBackground == this.backgroundColor) {
-                                this.gridStyle[rangeIndex[i]].background = this.buttonColor
+                                this.gridStyle[rangeIndex[i]].background = this.buttonColor;
                             } else {
-                                this.gridStyle[rangeIndex[i]].background = this.mixColor
+                                this.gridStyle[rangeIndex[i]].background = this.mixColor;
                             }
-                            this.gridStyle[rangeIndex[i]].cursor="pointer"
+                            this.gridStyle[rangeIndex[i]].cursor="pointer";
 
                             if (this.gridElementOverlap[rangeIndex[i]] == null) {
                                 this.gridElementOverlap[rangeIndex[i]] = {
@@ -284,6 +307,10 @@ import axios from 'axios';
                     }
                     // 放置一个led
                     case 2:{
+                        //将LED插入数据库
+                        db.transaction(function (context) {  
+                            context.executeSql('INSERT INTO LED (id,areaId,templateId,boardType) VALUES (?,?,?,?)',[data.id,index-1,0,boardType]);
+                        });
                         this.gridStyle[index-1].cursor = "pointer";
                         document.getElementById(index-1).innerHTML = "<div style = 'background-color:#409EFF;width:50%;height:50%;margin:auto'></div>";
                         //拖动按钮松开后蓝色代表LED
@@ -308,7 +335,7 @@ import axios from 'axios';
             // 判断是否显示表单，并初始化表单绑定的数据
             ifDialogFormVisible(index) {
                 // targetGrid读取gridElementOverlap对象，获得了选中网格中的所有组件。
-                let targetGrid = this.gridElementOverlap[index-1]
+                let targetGrid = this.gridElementOverlap[index-1];
                 if (targetGrid == null) {
                     this.dialogFormVisible = false
                 } else {
@@ -350,16 +377,22 @@ import axios from 'axios';
             submitGridDialogForm() {
                 
                 // 存储表单数据
-                let targetButton = this.targetGridElement['button']
-                for (let buttonId in targetButton) {
-                    this.button[buttonId].name = targetButton[buttonId].name
-                    this.button[buttonId].hwId = targetButton[buttonId].hwId
-                }
+                let targetButton = this.targetGridElement['button'];
 
+                for (let buttonId in targetButton) {
+                    this.button[buttonId].name = targetButton[buttonId].name;
+                    this.button[buttonId].hwId = targetButton[buttonId].hwId;
+                    db.transaction(function (context) { 
+                        context.executeSql('UPDATE Button SET name=?,hwid=? WHERE id =?',[targetButton[buttonId].name,targetButton[buttonId].hwId,buttonId]);
+                    });
+                }
                 let targetLed = this.targetGridElement['led']
                 for (let ledId in targetLed) {
-                    this.led[ledId].name = targetLed[ledId].name
-                    this.led[ledId].hwId = targetLed[ledId].hwId
+                    this.led[ledId].name = targetLed[ledId].name;
+                    this.led[ledId].hwId = targetLed[ledId].hwId;
+                    db.transaction(function (context) {
+                        context.executeSql('UPDATE LED SET name=?,hwid=? WHERE id =?',[targetLed[ledId].name,targetLed[ledId].hwId,ledId]);
+                    });
                 }
 
                 console.log(this.button)
@@ -410,6 +443,11 @@ import axios from 'axios';
                 } else {
                     this.workspaceDivClass.width = width - 10 + '%'
                 }
+            },
+
+            //读取
+            loadBoard(){
+
             },
         }
     }
