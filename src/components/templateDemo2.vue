@@ -17,37 +17,69 @@
             :id="index-1"
             @dragenter="ondragenter" @dragover="ondragover($event)" 
             @dragleave="ondragleave" @drop="ondrop($event, index)"
-            @click="dialogFormVisible = true"
+            @click="ifDialogFormVisible(index)"
         ></div>
+
         <el-dialog title="设置属性" :visible.sync="dialogFormVisible">
-            <el-form :model="form">
-                <el-form-item label="活动名称" :label-width="formLabelWidth">
-                    <el-input v-model="form.name" autocomplete="off"></el-input>
-                </el-form-item>
-            <el-form-item label="活动区域" :label-width="formLabelWidth">
-                <el-select v-model="form.region" placeholder="请选择活动区域">
-                    <el-option label="区域一" value="shanghai"></el-option>
-                    <el-option label="区域二" value="beijing"></el-option>
-                </el-select>
-            </el-form-item>
+            <!-- 这里需要接受参数gridDialogIndex(点击的网格的index) -->
+            <el-form :inline="true">
+
+                <!-- 用键值对的方式遍历gridElementOverlap中的一个对象 -->
+                <!-- 根据gridElementOverlap的结构，第一个v-for遍历了一个网格中所有组件的类型 -->
+                <!-- elementList为某一类型的组件列表，elementName为组件名 -->
+                <div v-for="(elementList, elementName, index) in gridElementOverlap[this.gridDialogIndex-1]" :key="index">
+
+                    <!-- v-if根据每个组件的类型（elementName的值）生成对应表单项。 -->
+                    <div v-if="elementName=='button'">
+                        <el-divider><h4>BUTTON</h4></el-divider>
+
+                        <!-- 第二个v-for遍历了某一类型组件的组件列表（elementList） -->
+                        <div v-for="(buttonId, index) in elementList" :key="index">
+                            <p>当前组件编号：{{buttonId}}</p>
+                            <el-form-item label="name">
+                                <el-input v-model="targetGridElement.button[buttonId].name"></el-input>
+                            </el-form-item>
+                            <el-form-item label="hwId">
+                                <el-input v-model="targetGridElement.button[buttonId].hwId"></el-input>
+                            </el-form-item>
+                        </div>
+                    </div>
+
+                    <!-- 同Button -->
+                    <div v-if="elementName=='led'">
+                        <el-divider><h4>LED</h4></el-divider>
+                        <div v-for="(ledId, index) in elementList" :key="index">
+                            <p>当前组件编号：{{ledId}}</p>
+                            <el-form-item label="name">
+                                <el-input v-model="targetGridElement.led[ledId].name"></el-input> 
+                            </el-form-item>
+                            <el-form-item label="hwId">
+                                <el-input v-model="targetGridElement.led[ledId].hwId"></el-input>
+                            </el-form-item>
+                        </div>
+                    </div>
+                </div>
+                
+            <el-button type="primary" @click="submitGridDialogForm">确定</el-button>
+            <el-button type="primary" @click="dialogFormVisible=false">取消</el-button>
+                
             </el-form>
-            <div slot="footer" class="dialog-footer">
-                <el-button @click="dialogFormVisible = false">取 消</el-button>
-                <el-button type="primary" @click="dialogFormVisible = false">确 定</el-button>
-            </div>
         </el-dialog>
+
         <br />
         <el-button type="primary" @click="testAxios"> 保存 </el-button>
     </div>
 </template>
 
 <script>
-    import axios from 'axios';
+
+import axios from 'axios';
     // var db = openDatabase('BSHdb', '1.0', 'Test DB', 2 * 1024 * 1024);
     export default {
         name: 'templateDemo2',
         data() {
             return {
+               
                  //弹窗默认关闭
                 dialogFormVisible: false,
                 totalWidth: 800,
@@ -57,22 +89,71 @@
                 gridWidth: 30,
                 // 网格绑定的样式，在mounted中初始化
                 gridStyle: [],
-                button: [],
-                led: [],
-                // 每个网格所包含的元素, 设为二维数组，在mounted中初始化
                 /*
-                    {
-                        type
-                        elIndex
-
+                    描述： gridIndex指网格的index; button列表存放所有button组件的id值; led列表同理。
+                    构造：只要一个组件的ui图标填充了一个网格，那么就将该组件的id添加至该网格index所对应的组件列表中。
+                    举例：组件Button的id为1，ui图标大小为2*2，覆盖了index分别为1, 2, 36, 37的网格，
+                        那么程序便会在gridElementOverlap中这四个index下的button列表中分别添加Button的id值1
+                    用法：用户点击一个网格，直接对gridElementOverlap索引网格index找到该网格上overlap的所有组件，修改对应参数值
+                    gridElementOverlap {
+                        gridIndex1: {
+                            button: [
+                                buttonId1, buttonId2, ...
+                            ],
+                            led: [
+                                ledId1, ledId2, ...
+                            ]
+                        }
+                        ...
                     }
                 */
-                gridElement: [],
-                form: {
-                    name: '',
-                    region: '',
+                gridElementOverlap: {},
+
+                // 用户点击的网格所对应的index值。生成表单时需要通过这个值找到某一网格下的所有组件
+                gridDialogIndex: 0,
+
+
+                /*
+                    经过尝试，发现把button以及led声明为对象形式，比列表形式更方便（主要是在表单读取网格组件信息时方便在此处索引组件id获取数据）
+                    id: {
+                        name: 
+                        hwId: 
+                    }
+                */
+                button: {},
+                led: {},
+
+                /*
+                    描述：与gridElementOverlap不同，这里存了特定一个网格中的所有组件的信息
+                    用法：与表单数据做双向绑定
+                    targetGridElement {
+                        button: {
+                            buttonId1: {
+                                name:
+                                hwId:
+                            },
+                            ...
+                        }
+                        led: {
+                            ledId1: {
+                                name: 
+                                hwId: 
+                            }
+                            ...
+                        }
+                    }
+                */
+                targetGridElement: {
+                    button: {},
+                    led: {}
                 },
-                formLabelWidth: '120px',
+
+
+                // 分别定义：背景颜色，单button颜色，单led颜色，组件叠加颜色
+                backgroundColor: '#FFFFFF',
+                buttonColor: "#8CFE90",
+                ledColor: "#00EFEF",
+                mixColor: "#000080",
 
                 // 微调放大/缩小图标的布局
                 iconDivClass: {
@@ -110,7 +191,7 @@
                         'box-sizing': 'border-box',
                         'font-size': '1px',
                         float: 'left',
-                        background:"#FFF",
+                        background: this.backgroundColor,
                     }
                 )
             }
@@ -131,12 +212,21 @@
         methods: {
             testAxios() {
                 // 向后端传递组件参数
+                let buttonList = []
+                let ledList = []
+                // 生成组件列表
+                for (let buttonId in this.button) {
+                    buttonList.push(this.button[buttonId])
+                }
+                for (let ledId in this.led) {
+                    ledList.push(this.led[ledId])
+                }
                 axios ({
                     method: 'post',
                     url: '/save',
                     data: {
-                        button: this.button,
-                        led: this.led
+                        button: buttonList,
+                        led: ledList
                     }
                     }).then(function (response) {
                         console.log(response.data)
@@ -156,43 +246,133 @@
                 //this.style.borderColor='#aaaaaa';
                 event.preventDefault()
                 let data = JSON.parse(sessionStorage.getItem("element"));
+                //console.log(data)
                 //this.style.borderColor='#aaaaaa';
                 switch(data.type){
                     // 放置一个Button
                     case 1:{
-                        //
-                        this.gridStyle[index-1].background = "#67C23A";
-                        this.gridStyle[index].background = "#67C23A";
-                        this.gridStyle[index+this.rowGridNum-1].background = "#67C23A";
-                        this.gridStyle[index+this.rowGridNum].background = "#67C23A";
-                        //拖动按钮松开后绿色代表button
-                        this.gridStyle[index-1].cursor = "pointer";
-                        this.gridStyle[index].cursor = "pointer";
-                        this.gridStyle[index+this.rowGridNum-1].cursor = "pointer";
-                        this.gridStyle[index+this.rowGridNum].cursor = "pointer";  
+                        // button覆盖的index
+                        let rangeIndex = [index-1, index, index+this.rowGridNum-1, index+this.rowGridNum]
+                        for(let i = 0 ; i < rangeIndex.length ; ++i) {
+                            // 如果覆盖位置上已存在其它组件，就将背景颜色设为mixColor，否则设为buttonColor
+                            let curBackground = this.gridStyle[rangeIndex[i]].background
+                            if (curBackground == this.backgroundColor) {
+                                this.gridStyle[rangeIndex[i]].background = this.buttonColor
+                            } else {
+                                this.gridStyle[rangeIndex[i]].background = this.mixColor
+                            }
+                            this.gridStyle[rangeIndex[i]].cursor="pointer"
+
+                            if (this.gridElementOverlap[rangeIndex[i]] == null) {
+                                this.gridElementOverlap[rangeIndex[i]] = {
+                                    button: [],
+                                    led: []
+                                }
+                            }
+                            this.gridElementOverlap[rangeIndex[i]]['button'].push(
+                                data.id
+                            )
+                        }
+
                         //已有元素在上面的格子变成可点击的手型 
-                        this.button.push({
+                        this.button[data.id] = {
                             name: data.name,
                             hwId: data.hwId
-                        })
+                        }
                         
                         break;
                     }
                     // 放置一个led
                     case 2:{
-                        this.gridStyle[index-1].cursor = "pointer";
-                        document.getElementById(index-1).innerHTML = "<div style = 'background-color:#409EFF;width:50%;height:50%;margin:auto'></div>";
+                        // 如果覆盖位置上已存在其它组件，就将背景颜色设为mixColor，否则设为ledColor
+                        let curBackground = this.gridStyle[index-1].background;
+                        if (curBackground == this.backgroundColor) {
+                            this.gridStyle[index-1].background = this.ledColor
+                        } else {
+                            this.gridStyle[index-1].background = this.mixColor
+                        }
                         //拖动按钮松开后蓝色代表LED
-                        this.led.push({
+                        this.gridStyle[index-1].cursor = "pointer";
+                        
+                        if (this.gridElementOverlap[index-1] == null) {
+                            this.gridElementOverlap[index-1] = {
+                                button: [],
+                                led: []
+                            }
+                        }
+                        this.gridElementOverlap[index-1]['led'].push(
+                            data.id
+                        )
+
+                        this.led[data.id] = {
                             name: data.name,
                             hwId: data.hwId
-                        })
-                        
+                        }
                         break;
                     }
                 }
             },
+            // 判断是否显示表单，并初始化表单绑定的数据
+            ifDialogFormVisible(index) {
+                // targetGrid读取gridElementOverlap对象，获得了选中网格中的所有组件。
+                let targetGrid = this.gridElementOverlap[index-1]
+                if (targetGrid == null) {
+                    this.dialogFormVisible = false
+                } else {
+                    this.gridDialogIndex = index
+                    // 初始化
+                    this.targetGridElement = {
+                        button: {},
+                        led: {}
+                    }
+                    for (let i = 0 ; i < targetGrid['button'].length ; ++i) {
+                        let targetButtonId = targetGrid['button'][i]
+                        // 新增的对象默认是非响应式的，要用 this.$set() 其声明为响应式。
+                        // 详见 https://cn.vuejs.org/v2/guide/reactivity.html
+                        this.$set(this.targetGridElement['button'], targetButtonId, {})
+                        let targetButton = this.targetGridElement['button'][targetButtonId]
+                        this.$set(targetButton, 'name', this.button[targetButtonId].name)
+                        this.$set(targetButton, 'hwId', this.button[targetButtonId].hwId)
+                        // this.targetGridElement['button'][targetButtonId] = {
+                        //      name: this.button[targetButtonId].name,
+                        //      hwId: this.button[targetButtonId].hwId
+                        // }
+                    }
+                    for (let i = 0 ; i < targetGrid['led'].length ; ++i) {
+                        let targetLedId = targetGrid['led'][i]
+                        // 与 button 同理
+                        this.$set(this.targetGridElement['led'], targetLedId, {})
+                        let targetLed = this.targetGridElement['led'][targetLedId]
+                        this.$set(targetLed, 'name', this.led[targetLedId].name)
+                        this.$set(targetLed, 'hwId', this.led[targetLedId].hwId)
+                        // this.targetGridElement['led'][targetLedId] = {
+                        //     name: this.led[targetLedId].name,
+                        //     hwId: this.led[targetLedId].hwId
+                        // }
+                    }
+                    this.dialogFormVisible = true
+                }
+            },
+            // 提交表单触发事件
+            submitGridDialogForm() {
+                
+                // 存储表单数据
+                let targetButton = this.targetGridElement['button']
+                for (let buttonId in targetButton) {
+                    this.button[buttonId].name = targetButton[buttonId].name
+                    this.button[buttonId].hwId = targetButton[buttonId].hwId
+                }
 
+                let targetLed = this.targetGridElement['led']
+                for (let ledId in targetLed) {
+                    this.led[ledId].name = targetLed[ledId].name
+                    this.led[ledId].hwId = targetLed[ledId].hwId
+                }
+
+                console.log(this.button)
+                console.log(this.led)
+                this.dialogFormVisible = false
+            },
             // 当页面状态改变时调用该函数重新计算网格边长
             alterGridWidth() {
                 this.totalWidth = document.getElementById("MainArea").offsetWidth;
@@ -238,52 +418,6 @@
                     this.workspaceDivClass.width = width - 10 + '%'
                 }
             },
-            
-            /*
-            loadDiv() {
-                // 获得中间区域的窗口参数
-                let mainDiv = document.getElementById("div2");
-                let totalWidth = mainDiv.offsetWidth;
-                let totalHeight = mainDiv.offsetHeight;
-                let totalCount = 0;
-
-                //生成40*40的网格
-                for(let w = 1;w*40<totalWidth;w++){
-                    for(let h = 1;h*40<totalHeight;h++){
-                        totalCount++;
-                        let newDiv = this.createDiv(totalCount);
-                        mainDiv.append(newDiv);
-                    }  
-                }
-            },
-            createDiv(id) {
-                let basicdiv = document.createElement("div");
-                basicdiv.id = id;
-                basicdiv.style.width = "38px";
-                basicdiv.style.height = "38px";
-                basicdiv.className = "Area";
-                // basicdiv.innerHTML = id;
-                basicdiv.style.float = "left";
-                basicdiv.style.border = "1px solid #aaaaaa";
-                basicdiv.drop = "drop($event)";
-                basicdiv.ondragenter=function(){
-                    this.style.borderColor='red';
-                }
-                basicdiv.ondragover=function(ev){
-                    ev.preventDefault()
-                }
-                basicdiv.ondragleave=function(){
-                    this.style.borderColor='#aaaaaa'
-                }
-                basicdiv.ondrop=function(){
-                    // location = this.id;
-                    this.style.borderColor='#aaaaaa';
-                    // this.innerHTML = this.innerHTML+"<p>"+msg.name;
-                    //    targetLi.parentNode.removeChild(targetLi);
-                }
-                return basicdiv;
-            }
-            */
         }
     }
 </script>
