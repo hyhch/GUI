@@ -287,8 +287,6 @@ import axios from 'axios';
                         this.gridStyle[index-1].cursor = "pointer";
                         document.getElementById(index-1).innerHTML = "<div style = 'background-color:#409EFF;width:50%;height:50%;margin:auto'></div>";
                         //拖动按钮松开后蓝色代表LED
-                        this.gridStyle[index-1].cursor = "pointer";
-                        
                         if (this.gridElementOverlap[index-1] == null) {
                             this.gridElementOverlap[index-1] = {
                                 button: [],
