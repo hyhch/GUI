@@ -284,13 +284,8 @@ import axios from 'axios';
                     }
                     // 放置一个led
                     case 2:{
-                        // 如果覆盖位置上已存在其它组件，就将背景颜色设为mixColor，否则设为ledColor
-                        let curBackground = this.gridStyle[index-1].background;
-                        if (curBackground == this.backgroundColor) {
-                            this.gridStyle[index-1].background = this.ledColor
-                        } else {
-                            this.gridStyle[index-1].background = this.mixColor
-                        }
+                        this.gridStyle[index-1].cursor = "pointer";
+                        document.getElementById(index-1).innerHTML = "<div style = 'background-color:#409EFF;width:50%;height:50%;margin:auto'></div>";
                         //拖动按钮松开后蓝色代表LED
                         this.gridStyle[index-1].cursor = "pointer";
                         
