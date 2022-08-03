@@ -99,7 +99,17 @@
                     <el-button type="primary" @click="alterSegmentGroup(selectLedId, selectSegmentId)">确定</el-button>
                     <el-button type="primary" @click="dialogSelectSegmentVisible=false">取消</el-button>
                 </el-dialog>
-
+                
+                <!-- 保存按钮弹出窗口 -->
+                <el-dialog title="请输入设计结果名称" :visible.sync="dialogSaveVisible">
+                    <el-form :inline="true">
+                        <el-form-item label="name">
+                            <el-input v-model="templateName"></el-input>
+                        </el-form-item>
+                        <el-button type="primary" @click="submitTotalForm()">确定</el-button>
+                        <el-button type="primary" @click="dialogSaveVisible=false">取消</el-button>
+                    </el-form>
+                </el-dialog>
                 <br />
                 <el-button type="primary" @click="testAxios"> 保存 </el-button>
             </div>
@@ -133,6 +143,7 @@
         name: 'templateDemo2',
         data() {
             return {
+                templateName:'',
                 boardType: "1",
                 //templateId：默认为0，保存后根据保存的id改变
                 templateId:0,
@@ -290,6 +301,17 @@
             segmentDragstart() {
                 this.dragElementType = 3;
             },
+            
+            //点保存取名后确定
+            submitTotalForm(){
+                let name = this.templateName;
+                console.log(name);
+                db.transaction(function (context) {  
+                    console.log('INSERT INTO TemplateList (name) VALUES '+name);
+                    context.executeSql('INSERT INTO TemplateList (name) VALUES (?)',[name]);
+                })
+            },
+            
             testAxios() {
                 // 向后端传递组件参数
                 let buttonList = []
