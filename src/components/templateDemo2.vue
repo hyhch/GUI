@@ -116,7 +116,11 @@
         name: 'templateDemo2',
         data() {
             return {
+                //boardType:1为PS面板，2为OS面板
                 boardType: "1",
+                //templateId：默认为0，保存后根据保存的id改变
+                templateId:0,
+
                 dragElementType: 1,
                 //弹窗默认关闭
                 dialogFormVisible: false,
@@ -229,40 +233,7 @@
         },
         
         mounted: function() {
-            // 获取中间工作区的页面宽度
-            this.totalWidth = document.getElementById("MainArea").offsetWidth;
-            // 计算一个网格的边长, 减去0.01防止四舍五入后总宽度不够，在浏览器允许的缩放范围内这个误差够了
-            // 1+this.rowGridNum用于抵消滚动条和一些玄学误差
-            this.gridWidth = this.totalWidth / (1 + this.rowGridNum) - 0.01
-
-            // 初始化所有网格的样式
-            for (let i = 0 ; i < this.rowGridNum * this.rowGridNum ; ++i) {
-                this.gridStyle.push(
-                    {
-                        width: this.gridWidth + 'px',
-                        height: this.gridWidth + 'px',
-                        display: 'inline-block',
-                        border: '1px solid',
-                        'box-sizing': 'border-box',
-                        'font-size': '1px',
-                        float: 'left',
-                        background: this.backgroundColor,
-                    }
-                )
-            }
-
-            // 监听改变页面大小的事件
-            let _this = this
-            window.onresize = function() {
-                _this.alterGridWidth()
-            }
-
-            // 利用elemet-resize-detector, 监听放大/缩小事件
-            var elementResizeDetectorMaker = require("element-resize-detector");
-            let erd = elementResizeDetectorMaker()
-            erd.listenTo(document.getElementById("MainArea"), function() {
-                _this.alterGridWidth()
-            });
+            this.pageInit();
         },
         methods: {
             buttonDragstart() {
@@ -274,6 +245,50 @@
             },
             segmentDragstart() {
                 this.dragElementType = 3;
+            },
+            pageInit(){
+                this.button = {};
+                this.led = {};
+                this.gridElementOverlap = {};
+                // this.targetGridElement = {
+                //     button: {},
+                //     led: {}
+                // };
+                // 获取中间工作区的页面宽度
+                this.totalWidth = document.getElementById("MainArea").offsetWidth;
+                // 计算一个网格的边长, 减去0.01防止四舍五入后总宽度不够，在浏览器允许的缩放范围内这个误差够了
+                // 1+this.rowGridNum用于抵消滚动条和一些玄学误差
+                this.gridWidth = this.totalWidth / (1 + this.rowGridNum) - 0.01
+                this.gridStyle = [];
+                // 初始化所有网格的样式
+                for (let i = 0 ; i < this.rowGridNum * this.rowGridNum ; ++i) {
+                    document.getElementById(i).innerHTML = "";
+                    this.gridStyle.push(
+                        {
+                            width: this.gridWidth + 'px',
+                            height: this.gridWidth + 'px',
+                            display: 'inline-block',
+                            border: '1px solid',
+                            'box-sizing': 'border-box',
+                            'font-size': '1px',
+                            float: 'left',
+                            background: this.backgroundColor,
+                        }
+                    )
+                }
+
+                // 监听改变页面大小的事件
+                let _this = this
+                window.onresize = function() {
+                    _this.alterGridWidth()
+                }
+
+                // 利用elemet-resize-detector, 监听放大/缩小事件
+                var elementResizeDetectorMaker = require("element-resize-detector");
+                let erd = elementResizeDetectorMaker()
+                erd.listenTo(document.getElementById("MainArea"), function() {
+                    _this.alterGridWidth()
+                });
             },
             testAxios() {
                 // 向后端传递组件参数
@@ -403,7 +418,7 @@
             // 判断是否显示表单，并初始化表单绑定的数据
             ifDialogFormVisible(index) {
                 // targetGrid读取gridElementOverlap对象，获得了选中网格中的所有组件。
-                let targetGrid = this.gridElementOverlap[index-1]
+                let targetGrid = this.gridElementOverlap[index-1];
                 if (targetGrid == null) {
                     this.dialogFormVisible = false
                 } else {
@@ -465,8 +480,85 @@
 
                 this.dialogFormVisible = false
             },
+            
             loadBoard(){
+                this.pageInit();
+                let that = this;
+                //使用that来接受this的内容，此时可以通过that访问data中的数据
+                db.transaction(function (context) { 
+                        context.executeSql('SELECT * FROM Button WHERE templateId = ? and boardType = ?',[that.templateId,that.boardType],function(context,results){
+                            let len = results.rows.length;
+                            for(let i = 0;i<len;i++){
+                                //对每个按钮执行页面效果渲染
+                                let index = parseInt(results.rows.item(i).areaId);
+                                // button覆盖的index
+                                let rangeIndex = [index, index+1, index+that.rowGridNum, index+that.rowGridNum+1];
+                                let elementId = results.rows.item(i).id;
+                                console.log(typeof(elementId));
+                                for(let i = 0 ; i < rangeIndex.length; ++i) {
+                                    console.log(that.gridStyle[rangeIndex[i]]);
+                                // 如果覆盖位置上已存在其它组件，就将背景颜色设为mixColor，否则设为buttonColor
+                                    let curBackground = that.gridStyle[rangeIndex[i]].background;
+                                    if (curBackground == that.backgroundColor) {
+                                        that.gridStyle[rangeIndex[i]].background = that.buttonColor
+                                    } else {
+                                        that.gridStyle[rangeIndex[i]].background = that.mixColor
+                                    }
 
+                                    //已有元素在上面的格子变成可点击的手型 
+                                    that.gridStyle[rangeIndex[i]].cursor="pointer"
+                                    if (that.gridElementOverlap[rangeIndex[i]] == null) {
+                                        that.gridElementOverlap[rangeIndex[i]] = {
+                                            button: [],
+                                            led: [ ]
+                                        }
+                                    }
+                                    that.gridElementOverlap[rangeIndex[i]]['button'].push(
+                                        elementId
+                                    )
+
+
+                                }
+
+                                that.button[elementId] = {
+                                    name: results.rows.item(i).name,
+                                    hwId: results.rows.item(i).hwid
+                                }
+                                // for (let i = 0 ; i < targetGrid['button'].length ; ++i) {
+                                //     let targetButtonId = targetGrid['button'][i]
+                                //     // 新增的对象默认是非响应式的，要用 this.$set() 其声明为响应式。
+                                //     // 详见 https://cn.vuejs.org/v2/guide/reactivity.html
+                                //     this.$set(this.targetGridElement['button'], targetButtonId, {})
+                                //     let targetButton = this.targetGridElement['button'][targetButtonId]
+                                //     this.$set(targetButton, 'name', this.button[targetButtonId].name)
+                                //     this.$set(targetButton, 'hwId', this.button[targetButtonId].hwId)
+                                // }
+                            }
+                        });
+                        context.executeSql('SELECT * FROM LED WHERE templateId = ? and boardType = ?',[that.templateId,that.boardType],function(context,results){
+                            let len = results.rows.length;
+                            for(let i = 0;i<len;i++){
+                                let index = parseInt(results.rows.item(i).areaId);
+                                let elementId = results.rows.item(i).id;
+                                that.gridStyle[index].cursor = "pointer";
+                                document.getElementById(index).innerHTML = "<div style = 'background-color:#409EFF;width:50%;height:50%;margin:auto'></div>";
+                                if (that.gridElementOverlap[index] == null) {
+                                    that.gridElementOverlap[index] = {
+                                        button: [],
+                                        led: []
+                                    }
+                                }
+                                that.gridElementOverlap[index]['led'].push(
+                                    elementId
+                                )
+
+                                that.led[elementId] = {
+                                    name: results.rows.item(i).name,
+                                    hwId: results.rows.item(i).hwid
+                                }   
+                            }
+                        });
+                });
             },
             // 当页面状态改变时调用该函数重新计算网格边长
             alterGridWidth() {
