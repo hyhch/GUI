@@ -48,9 +48,8 @@
                         <div v-for="(elementList, elementName, index) in gridElementOverlap[this.gridDialogIndex-1]" :key="index">
 
                             <!-- v-if根据每个组件的类型（elementName的值）生成对应表单项。 -->
-                            <div v-if="elementName=='button'">
-                                <el-divider><h4>BUTTON</h4></el-divider>
-
+                            <div v-if="elementName==='button'">
+                                <el-divider v-if="elementList.length>0"><h4>BUTTON</h4></el-divider>
                                 <!-- 第二个v-for遍历了某一类型组件的组件列表（elementList） -->
                                 <div v-for="(buttonId, index) in elementList" :key="index">
                                     <p>当前组件编号：{{buttonId}}</p>
@@ -64,8 +63,8 @@
                             </div>
 
                             <!-- 同Button -->
-                            <div v-if="elementName=='led'">
-                                <el-divider><h4>LED</h4></el-divider>
+                            <div v-if="elementName==='led'">
+                                <el-divider v-if="elementList.length>0"><h4>LED</h4></el-divider>
                                 <div v-for="(ledId, index) in elementList" :key="index">
                                     <p>当前组件编号：{{ledId}}</p>
                                     <el-form-item label="name">
@@ -93,14 +92,26 @@
 
 <script>
     import axios from 'axios';
-    var elementCount = 1;
+    var buttonCount = 1;
+    var ledCount = 1;
+    // var segmentCount = 1;
     var db = openDatabase('BSHdb', '1.0', 'Test DB', 2 * 1024 * 1024);
     db.transaction(function (context) {
-            context.executeSql('SELECT MAX(MAX(bt.id),MAX(led.id)) AS max_result FROM Button as bt,LED as led', [], function (context, results) {
-            elementCount = results.rows.item(0).max_result+1;
-            console.log(elementCount);
+            context.executeSql('SELECT (bt.id) AS max_result FROM Button as bt', [], function (context, results) {
+            if (results.rows.length > 0) {
+                buttonCount = results.rows.item(0).max_result+1;
+            }
         });
     });
+    db.transaction(function (context) {
+            context.executeSql('SELECT (led.id) AS max_result FROM LED as led', [], function (context, results) {
+            if (results.rows.length > 0) {
+                ledCount = results.rows.item(0).max_result+1;
+            }
+            
+        });
+    });
+    
     export default {
         name: 'templateDemo2',
         data() {
@@ -183,6 +194,16 @@
                     led: {}
                 },
 
+                /*
+                    virtualSegment {
+                        segmentId1: {
+                            name: 
+                            ledMember: [ledId1, ledId2, ...]
+                        }
+                    }
+                */
+                virtualSegment: {},
+
 
                 // 分别定义：背景颜色，单button颜色，单led颜色，组件叠加颜色
                 backgroundColor: '#FFFFFF',
@@ -245,14 +266,14 @@
         },
         methods: {
             buttonDragstart() {
-                //type属性：1=按钮；2=LED灯
+                //type属性：1=按钮；2=LED灯；3=virtualSegment
                 this.dragElementType = 1;
             },
             ledDragstart() {
                 this.dragElementType = 2;
             },
             segmentDragstart() {
-                
+                this.dragElementType = 3;
             },
             testAxios() {
                 // 向后端传递组件参数
@@ -288,7 +309,7 @@
             },
             putButton(index) {
                 let boardType = this.boardType
-                let elementId = elementCount
+                let elementId = buttonCount
                     // 放置一个Button
                 db.transaction(function (context) {  
                     context.executeSql('INSERT INTO Button (id,areaId,templateId,boardType) VALUES (?,?,?,?)',[elementId,index-1,0,boardType]);
@@ -323,11 +344,11 @@
                     hwId: ''
                 }
 
-                elementCount++
+                buttonCount++
             },
             putLed(index) {
                 let boardType = this.boardType
-                let elementId = elementCount
+                let elementId = ledCount
                 //将LED插入数据库
                 db.transaction(function (context) {  
                     context.executeSql('INSERT INTO LED (id,areaId,templateId,boardType) VALUES (?,?,?,?)',[elementId,index-1,0,boardType]);
@@ -350,18 +371,33 @@
                     hwId: ''
                 }
 
-                elementCount++
+                ledCount++
+            },
+            putSegment(index) {
+                let rangeIndex = [index, index-1+this.rowGridNum, index+1+this.rowGridNum, index+2*this.rowGridNum,
+                                    index-1+3*this.rowGridNum, index+1+3*this.rowGridNum, index+4*this.rowGridNum]
+                for (let i = 0 ; i < rangeIndex.length ; ++i) {
+                    this.putLed(rangeIndex[i])
+                }
+                this.virtualSegment[this.groupCount]
             },
             ondrop(event, index)  {
                 //this.style.borderColor='#aaaaaa';
                 event.preventDefault()
                 //this.style.borderColor='#aaaaaa';
-                if (this.dragElementType == 1) {
-                    this.putButton(index)
-                } else if (this.dragElementType == 2) {
-                    this.putLed(index)
-                } else {
-                    console.log('other situations')
+                switch (this.dragElementType) {
+                    case 1:
+                        this.putButton(index)
+                        break
+                    case 2:
+                        this.putLed(index)
+                        break
+                    case 3:
+                        this.putSegment(index)
+                        break
+                    default:
+                        console.log('other situations')
+                        break
                 }
             },
             // 判断是否显示表单，并初始化表单绑定的数据
@@ -514,4 +550,3 @@
     }
 
 </style>
-
