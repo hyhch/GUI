@@ -111,7 +111,8 @@
                     </el-form>
                 </el-dialog>
                 <br />
-                <el-button type="primary" @click="testAxios"> 保存 </el-button>
+                <el-button type="primary" @click="dialogSaveVisible=true"> 保存 </el-button>
+                <el-button type="primary" @click="testAxios"> 导出 </el-button>
             </div>
         </el-col>
     </div>
@@ -124,21 +125,24 @@
     var segmentCount = 1;
     var db = openDatabase('BSHdb', '1.0', 'Test DB', 2 * 1024 * 1024);
     db.transaction(function (context) {
-            context.executeSql('SELECT (bt.id) AS max_result FROM Button as bt', [], function (context, results) {
+        context.executeSql('SELECT MAX(bt.id) AS max_result FROM Button as bt', [], function (context, results) {
             if (results.rows.length > 0) {
                 buttonCount = results.rows.item(0).max_result+1;
             }
         });
-    });
-    db.transaction(function (context) {
-            context.executeSql('SELECT (led.id) AS max_result FROM LED as led', [], function (context, results) {
+        context.executeSql('SELECT MAX(led.id) AS max_result FROM LED as led', [], function (context, results) {
             if (results.rows.length > 0) {
                 ledCount = results.rows.item(0).max_result+1;
             }
-            
         });
     });
-    
+    // db.transaction(function (context) {
+    //         context.executeSql('SELECT (led.id) AS max_result FROM LED as led', [], function (context, results) {
+    //         if (results.rows.length > 0) {
+    //             ledCount = results.rows.item(0).max_result+1;
+    //         }
+    //     });
+    // });
     export default {
         name: 'templateDemo2',
         data() {
@@ -148,6 +152,8 @@
                 //templateId：默认为0，保存后根据保存的id改变
                 templateId:0,
                 dragElementType: 1,
+                //保存弹窗默认关闭
+                dialogSaveVisible:false,
                 // 表单弹窗默认关闭
                 dialogFormVisible: false,
                 // 选择segment组别弹窗
@@ -287,8 +293,8 @@
         },
         
         mounted: function() {
-            this.pageInit()
-            this.loadBoard()
+            this.pageInit();
+            this.loadBoard();
         },
         methods: {
             buttonDragstart() {
@@ -305,17 +311,33 @@
             //点保存取名后确定
             submitTotalForm(){
                 let name = this.templateName;
-                console.log(name);
-                db.transaction(function (context) {  
-                    console.log('INSERT INTO TemplateList (name) VALUES '+name);
-                    context.executeSql('INSERT INTO TemplateList (name) VALUES (?)',[name]);
-                })
+                let templateId = this.templateId;
+                db.transaction(function (context) { 
+                    //若提交时templateid为0，则是新设计，插入TemplateList后将templateId暂时等于0的元素均设置成当前插入templateId
+                    if(templateId ==0){
+                        context.executeSql('INSERT INTO TemplateList (name) VALUES (?)',[name]);
+                        context.executeSql('SELECT MAX(tp.id) AS max_result FROM TemplateList as tp', [], function (context, results) {
+                            if (results.rows.length > 0) {
+                                console.log(results.rows.item(0).max_result);
+                                templateId = results.rows.item(0).max_result;
+                                console.log(templateId);
+                                context.executeSql('UPDATE Button SET templateId=? WHERE templateId =0',[templateId]);
+                                context.executeSql('UPDATE LED SET templateId=? WHERE templateId =0',[templateId]);
+                            }
+                        });
+                    }
+                    //若提交时templateid不为0，则是旧设计重新命名
+                    else{
+                        context.executeSql('UPDATE TemplateList SET name=? WHERE id =?',[name,templateId]);
+                    } 
+                })     
+                this.dialogSaveVisible = false;
             },
             
             testAxios() {
                 // 向后端传递组件参数
-                let buttonList = []
-                let ledList = []
+                let buttonList = [];
+                let ledList = [];
                 // 生成组件列表
                 for (let buttonId in this.button) {
                     buttonList.push(this.button[buttonId])
@@ -550,7 +572,7 @@
                     });
                 }
 
-                this.dialogFormVisible = false
+                this.dialogFormVisible = false;
             },
             // actionNum=1: 删除; actionNum=2: 查看分组信息; actionNum=3: 更改segement分组
             addressTargetLed(ledId, actionNum) {
