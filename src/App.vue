@@ -24,6 +24,7 @@
    context.executeSql('CREATE TABLE IF NOT EXISTS Button ("id" INTEGER NOT NULL,"name" TEXT,"hwId" TEXT,"areaId" TEXT,"templateId" INTEGER,"boardType" INTEGER,PRIMARY KEY ("id"))');
    context.executeSql('CREATE TABLE IF NOT EXISTS LED ("id" INTEGER NOT NULL,"name" TEXT,"hwId" TEXT,"areaId" TEXT,"segmentId" INTEGER,"templateId" INTEGER,"boardType" INTEGER,PRIMARY KEY ("id"))');
    context.executeSql('CREATE TABLE IF NOT EXISTS ButtonMapping ("id" INTEGER NOT NULL,"name" TEXT,"unitname" TEXT,"buttonMode" TEXT,"templateId" INTEGER,"buttonId" INTEGER,PRIMARY KEY ("id"))');
+   context.executeSql('CREATE TABLE IF NOT EXISTS Segment ("id" INTEGER NOT NULL,"name" TEXT,"templateId" INTEGER,"boardType" INTEGER,PRIMARY KEY ("id"))');
      //创建表
     //  context.executeSql('INSERT INTO Button (id, name) VALUES (1, "aaa")');
     //  context.executeSql('INSERT INTO Button (id, name) VALUES (2, "aaa")');
@@ -56,6 +57,7 @@
     }
   }
 </script>
+
 
 
 
