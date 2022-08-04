@@ -10,7 +10,7 @@ const routes = [
     component: () => import('../components/templateDemo1'),
   },
   {
-    path: '/templateDemo2',
+    path: '/templateDemo2/:templateId'',
     name: 'templateDemo2',
     component: () => import('../components/templateDemo2'),
   },
