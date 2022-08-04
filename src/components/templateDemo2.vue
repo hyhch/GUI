@@ -143,8 +143,8 @@
             return {
                 templateName:'',
                 boardType: "1",
-                //templateId：默认为0，保存后根据保存的id改变
-                templateId:0,
+                //templateId：默认为0，页面跳转时绑定页面传过来的templateId
+                templateId:this.$route.params.templateId,
                 dragElementType: 1,
                 // 表单弹窗默认关闭
                 dialogFormVisible: false,
@@ -312,6 +312,7 @@
                                 console.log(templateId);
                                 context.executeSql('UPDATE Button SET templateId=? WHERE templateId =0',[templateId]);
                                 context.executeSql('UPDATE LED SET templateId=? WHERE templateId =0',[templateId]);
+                                location.reload();
                             }
                         });
                     }
