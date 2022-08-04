@@ -136,13 +136,7 @@
             }
         });
     });
-    // db.transaction(function (context) {
-    //         context.executeSql('SELECT (led.id) AS max_result FROM LED as led', [], function (context, results) {
-    //         if (results.rows.length > 0) {
-    //             ledCount = results.rows.item(0).max_result+1;
-    //         }
-    //     });
-    // });
+    
     export default {
         name: 'templateDemo2',
         data() {
@@ -152,14 +146,14 @@
                 //templateId：默认为0，保存后根据保存的id改变
                 templateId:0,
                 dragElementType: 1,
-                //保存弹窗默认关闭
-                dialogSaveVisible:false,
                 // 表单弹窗默认关闭
                 dialogFormVisible: false,
                 // 选择segment组别弹窗
                 dialogSelectSegmentVisible: false,
                 // 列举segment成员弹窗
                 dialogSegmentMemberVisible: false,
+                // 表单弹窗默认关闭
+                dialogSaveVisible: false,
                 totalWidth: 800,
                 // 每行网格个数
                 rowGridNum: 35,
@@ -219,12 +213,7 @@
                 */
                 button: {},
                 led: {},
-                segment: {
-                    0: {
-                        name: 'defaultSegmentGroup',
-                        ledMember: []
-                    }
-                },
+                segment: {},
 
 
                 // 在表单中对某一led进行单独操作时更新该值
@@ -293,8 +282,8 @@
         },
         
         mounted: function() {
-            this.pageInit();
-            this.loadBoard();
+            this.pageInit()
+            this.loadBoard()
         },
         methods: {
             buttonDragstart() {
@@ -336,8 +325,8 @@
             
             testAxios() {
                 // 向后端传递组件参数
-                let buttonList = [];
-                let ledList = [];
+                let buttonList = []
+                let ledList = []
                 // 生成组件列表
                 for (let buttonId in this.button) {
                     buttonList.push(this.button[buttonId])
@@ -408,13 +397,8 @@
             ondragleave() {
                 //this.style.borderColor='#aaaaaa'
             },
-            putButton(index) {
+            putButton(index, elementId, _name, _hwId, isAtLoad) {
                 let boardType = this.boardType
-                let elementId = buttonCount
-                    // 放置一个Button
-                db.transaction(function (context) {  
-                    context.executeSql('INSERT INTO Button (id,areaId,templateId,boardType) VALUES (?,?,?,?)',[elementId,index-1,0,boardType]);
-                })
                 // button覆盖的index
                 let rangeIndex = [index-1, index, index+this.rowGridNum-1, index+this.rowGridNum]
                 for(let i = 0 ; i < rangeIndex.length ; ++i) {
@@ -441,19 +425,20 @@
                 }
 
                 this.button[elementId] = {
-                    name: '',
-                    hwId: ''
+                    name: _name,
+                    hwId: _hwId
                 }
 
-                buttonCount++
+                if (isAtLoad == 0) {
+                    db.transaction(function (context) {  
+                        context.executeSql('INSERT INTO Button (id,areaId,templateId,boardType) VALUES (?,?,?,?)',[elementId,index-1,0,boardType]);
+                    })
+                }
+                
             },
-            putLed(index, _name, _hwId, _segmentId) {
+            putLed(index, elementId, _name, _hwId, _segmentId, isAtLoad) {
                 let boardType = this.boardType
-                let elementId = ledCount
-                //将LED插入数据库
-                db.transaction(function (context) {  
-                    context.executeSql('INSERT INTO LED (id,name,hwId,areaId,segmentId,templateId,boardType) VALUES (?,?,?,?,?,?,?)',[elementId,_name,_hwId,index-1,_segmentId,0,boardType]);
-                });
+               
                 this.gridStyle[index-1].cursor = "pointer";
                 document.getElementById(index-1).innerHTML = "<div style = 'background-color:#409EFF;width:50%;height:50%;margin:auto'></div>";
                 //拖动按钮松开后蓝色代表LED
@@ -473,35 +458,57 @@
                     segmentId: _segmentId,
                 }
                 // 把新建led添加至给定的segment组别中
+               
                 this.segment[_segmentId].ledMember.push(elementId)
-                ledCount++
+
+                //将LED插入数据库
+                if (isAtLoad == 0) {
+                    db.transaction(function (context) {  
+                        context.executeSql('INSERT INTO LED (id,name,hwId,areaId,segmentId,templateId,boardType) VALUES (?,?,?,?,?,?,?)',[elementId,_name,_hwId,index-1,_segmentId,0,boardType]);
+                    });
+                }
             },
-            putSegment(index) {
-                let rangeIndex = [index, index-1+this.rowGridNum, index+1+this.rowGridNum, index+2*this.rowGridNum,
-                                    index-1+3*this.rowGridNum, index+1+3*this.rowGridNum, index+4*this.rowGridNum]
+            putSegment(segmentId, _name, isAtLoad) {
+                let boardType = this.boardType
                 // 新建一个segment组别
-                this.segment[segmentCount] = {
-                    name: "Segment -- " + segmentCount,
+                this.segment[segmentId] = {
+                    name: _name,
                     ledMember: []
                 }
-                for (let i = 0 ; i < rangeIndex.length ; ++i) {
-                    this.putLed(rangeIndex[i], '', '', segmentCount)
+                
+                if (isAtLoad == 0) {
+                    db.transaction(function (context) {  
+                        context.executeSql('INSERT INTO Segment (id,name,templateId,boardType) VALUES (?,?,?,?)',[segmentId,_name,0,boardType]);
+                    });
                 }
-                segmentCount++
+                
             },
             ondrop(event, index)  {
                 //this.style.borderColor='#aaaaaa';
                 event.preventDefault()
                 //this.style.borderColor='#aaaaaa';
+                let rangeIndex
                 switch (this.dragElementType) {
                     case 1:
-                        this.putButton(index)
+                        this.putButton(index, buttonCount, '', '', 0)
+                        buttonCount++
                         break
                     case 2:
-                        this.putLed(index, '', '', 0)
+                        if (this.segment[0] == null) {
+                            this.putSegment(0, 'defaultSegmentGroup', 0)
+                        }
+                        this.putLed(index, ledCount, '', '', 0, 0)
+                        ledCount++
                         break
                     case 3:
-                        this.putSegment(index)
+                        this.putSegment(segmentCount, "SegmentGroup" + segmentCount, 0)
+                        rangeIndex = [index, index-1+this.rowGridNum, index+1+this.rowGridNum, index+2*this.rowGridNum,
+                            index-1+3*this.rowGridNum, index+1+3*this.rowGridNum, index+4*this.rowGridNum]
+                        for (let i = 0 ; i < rangeIndex.length ; ++i) {
+                            this.putLed(rangeIndex[i], ledCount, '', '', segmentCount, 0)
+                            ledCount++
+                        }
+                        segmentCount++
                         break
                     default:
                         console.log('other situations')
@@ -529,10 +536,6 @@
                         let targetButton = this.targetGridElement['button'][targetButtonId]
                         this.$set(targetButton, 'name', this.button[targetButtonId].name)
                         this.$set(targetButton, 'hwId', this.button[targetButtonId].hwId)
-                        // this.targetGridElement['button'][targetButtonId] = {
-                        //      name: this.button[targetButtonId].name,
-                        //      hwId: this.button[targetButtonId].hwId
-                        // }
                     }
                     for (let i = 0 ; i < targetGrid['led'].length ; ++i) {
                         let targetLedId = targetGrid['led'][i]
@@ -542,10 +545,6 @@
                         this.$set(targetLed, 'name', this.led[targetLedId].name)
                         this.$set(targetLed, 'hwId', this.led[targetLedId].hwId)
                         this.$set(targetLed, 'segmentId', this.led[targetLedId].segmentId)
-                        // this.targetGridElement['led'][targetLedId] = {
-                        //     name: this.led[targetLedId].name,
-                        //     hwId: this.led[targetLedId].hwId
-                        // }
                     }
                     this.dialogFormVisible = true
                 }
@@ -572,7 +571,7 @@
                     });
                 }
 
-                this.dialogFormVisible = false;
+                this.dialogFormVisible = false
             },
             // actionNum=1: 删除; actionNum=2: 查看分组信息; actionNum=3: 更改segement分组
             addressTargetLed(ledId, actionNum) {
@@ -607,72 +606,37 @@
                 let that = this;
                 //使用that来接受this的内容，此时可以通过that访问data中的数据
                 db.transaction(function (context) { 
+                        // 读取Button数据
                         context.executeSql('SELECT * FROM Button WHERE templateId = ? and boardType = ?',[that.templateId,that.boardType],function(context,results){
                             let len = results.rows.length;
                             for(let i = 0;i<len;i++){
-                                //对每个按钮执行页面效果渲染
-                                let index = parseInt(results.rows.item(i).areaId);
-                                // button覆盖的index
-                                let rangeIndex = [index, index+1, index+that.rowGridNum, index+that.rowGridNum+1];
-                                let elementId = results.rows.item(i).id;
-                                console.log(typeof(elementId));
-                                for(let i = 0 ; i < rangeIndex.length; ++i) {
-                                    console.log(that.gridStyle[rangeIndex[i]]);
-                                // 如果覆盖位置上已存在其它组件，就将背景颜色设为mixColor，否则设为buttonColor
-                                    let curBackground = that.gridStyle[rangeIndex[i]].background;
-                                    if (curBackground == that.backgroundColor) {
-                                        that.gridStyle[rangeIndex[i]].background = that.buttonColor
-                                    } else {
-                                        that.gridStyle[rangeIndex[i]].background = that.mixColor
-                                    }
-                                    //已有元素在上面的格子变成可点击的手型 
-                                    that.gridStyle[rangeIndex[i]].cursor="pointer"
-                                    if (that.gridElementOverlap[rangeIndex[i]] == null) {
-                                        that.gridElementOverlap[rangeIndex[i]] = {
-                                            button: [],
-                                            led: [ ]
-                                        }
-                                    }
-                                    that.gridElementOverlap[rangeIndex[i]]['button'].push(
-                                        elementId
-                                    )
-                                }
-                                that.button[elementId] = {
-                                    name: results.rows.item(i).name,
-                                    hwId: results.rows.item(i).hwId
-                                }
-                                // for (let i = 0 ; i < targetGrid['button'].length ; ++i) {
-                                //     let targetButtonId = targetGrid['button'][i]
-                                //     // 新增的对象默认是非响应式的，要用 this.$set() 其声明为响应式。
-                                //     // 详见 https://cn.vuejs.org/v2/guide/reactivity.html
-                                //     this.$set(this.targetGridElement['button'], targetButtonId, {})
-                                //     let targetButton = this.targetGridElement['button'][targetButtonId]
-                                //     this.$set(targetButton, 'name', this.button[targetButtonId].name)
-                                //     this.$set(targetButton, 'hwId', this.button[targetButtonId].hwId)
-                                // }
+                                let index = parseInt(results.rows.item(i).areaId)
+                                let elementId = results.rows.item(i).id
+                                let name = results.rows.item(i).name
+                                let hwId = results.rows.item(i).hwId
+                                that.putButton(index, elementId, name, hwId, 1)
                             }
                         });
+                        // 读取Segment数据
+                        context.executeSql('SELECT * FROM Segment WHERE templateId = ? and boardType = ?',[that.templateId,that.boardType],function(context,results){
+                            let len = results.rows.length;
+                            for(let i = 0;i<len;i++){
+                                let segmentId = results.rows.item(i).id
+                                let name = results.rows.item(i).name
+                                that.putSegment(segmentId, name, 1)
+                            }
+                        });
+                        // 读取led数据
                         context.executeSql('SELECT * FROM LED WHERE templateId = ? and boardType = ?',[that.templateId,that.boardType],function(context,results){
                             let len = results.rows.length;
                             for(let i = 0;i<len;i++){
                                 let index = parseInt(results.rows.item(i).areaId);
                                 let elementId = results.rows.item(i).id;
-                                that.gridStyle[index].cursor = "pointer";
-                                document.getElementById(index).innerHTML = "<div style = 'background-color:#409EFF;width:50%;height:50%;margin:auto'></div>";
-                                if (that.gridElementOverlap[index] == null) {
-                                    that.gridElementOverlap[index] = {
-                                        button: [],
-                                        led: []
-                                    }
-                                }
-                                that.gridElementOverlap[index]['led'].push(
-                                    elementId
-                                )
-                                that.led[elementId] = {
-                                    name: results.rows.item(i).name,
-                                    hwId: results.rows.item(i).hwId,
-                                    segmentId: results.rows.item(i).segmentId
-                                }   
+                                let name = results.rows.item(i).name
+                                console.log(name)
+                                let hwId = results.rows.item(i).hwId
+                                let segmentId = results.rows.item(i).segmentId
+                                that.putLed(index, elementId, name, hwId, segmentId, 1)
                             }
                         });
                 });
@@ -759,3 +723,4 @@
     }
 
 </style>
+
