@@ -312,6 +312,7 @@
                                 console.log(templateId);
                                 context.executeSql('UPDATE Button SET templateId=? WHERE templateId =0',[templateId]);
                                 context.executeSql('UPDATE LED SET templateId=? WHERE templateId =0',[templateId]);
+                                context.executeSql('UPDATE Segment SET templateId=? WHERE templateId =0',[templateId]);
                                 location.reload();
                             }
                         });
