@@ -160,9 +160,18 @@
                         <el-button @click="dialogSaveVisible=false">取消</el-button>
                     </el-form>
                 </el-dialog>
+                <el-dialog title="请输入导出路径" :visible.sync="dialogExportVisible">
+                    <el-form :inline="true">
+                        <el-form-item label="路径">
+                            <el-input v-model="exportPath"></el-input>
+                        </el-form-item>
+                        <el-button type="primary" @click="testAxios()">确定</el-button>
+                        <el-button @click="dialogExportVisible=false">取消</el-button>
+                    </el-form>
+                </el-dialog>
                 <br />
                 <el-button type="primary" @click="ifDialogSaveVisible"> 保存 </el-button>
-                <el-button type="primary" @click="testAxios"> 导出 </el-button>
+                <el-button type="primary" @click="dialogExportVisible=true"> 导出 </el-button>
             </div>
         </el-col>
     </div>
@@ -196,12 +205,16 @@
         name: 'templateDemo2',
         data() {
             return {
+                exportPath:'',
                 templateName:'',
                 boardType: "1",
                 //templateId：默认为0，保存后根据保存的id改变
                 templateId:this.$route.params.templateId,
                 defaultSegmentId: 0,
                 dragElementType: 1,
+                
+                //导出弹窗，默认关闭
+                dialogExportVisible:false,
                 //保存弹窗默认关闭
                 dialogSaveVisible:false,
                 // 确认删除弹窗
@@ -372,7 +385,8 @@
                     }
                     segmentList.push(newSegment)
                 }
-                console.log(this.boardType)
+                console.log(this.boardType);
+                console.log(this.exportPath);
                 axios ({
                     method: 'post',
                     url: '/save',
@@ -380,7 +394,8 @@
                         boardType: this.boardType,
                         button: buttonList,
                         led: ledList,
-                        segment: segmentList
+                        segment: segmentList,
+                        exportPath:this.exportPath
                     }
                     }).then(function (response) {
                         console.log(response.data)
