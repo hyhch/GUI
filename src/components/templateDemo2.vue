@@ -348,19 +348,39 @@
                 // 向后端传递组件参数
                 let buttonList = []
                 let ledList = []
+                let segmentList = []
                 // 生成组件列表
                 for (let buttonId in this.button) {
                     buttonList.push(this.button[buttonId])
                 }
                 for (let ledId in this.led) {
-                    ledList.push(this.led[ledId])
+                    ledList.push({
+                        name: this.led[ledId].name,
+                        hwId: this.led[ledId].hwId
+                    })
                 }
+                for (let segmentId in this.segment) {
+                    if (this.segment[segmentId].name=='default') {
+                        continue
+                    }
+                    let newSegment = {
+                        name: this.segment[segmentId].name,
+                        ledMemberName: []
+                    }
+                    for (let i = 0 ; i < this.segment[segmentId].ledMember.length ; ++i) {
+                        newSegment.ledMemberName.push(this.led[this.segment[segmentId].ledMember[i]].name)
+                    }
+                    segmentList.push(newSegment)
+                }
+                console.log(this.boardType)
                 axios ({
                     method: 'post',
                     url: '/save',
                     data: {
+                        boardType: this.boardType,
                         button: buttonList,
-                        led: ledList
+                        led: ledList,
+                        segment: segmentList
                     }
                     }).then(function (response) {
                         console.log(response.data)
