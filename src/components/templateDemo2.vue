@@ -139,6 +139,7 @@
                 <!-- 下拉菜单选择led所在segment分组 -->
                 <el-dialog title="选择segment分组" :visible.sync="dialogSelectSegmentVisible">
                     <el-select v-model="selectSegmentId" placeholder="请选择">
+                        <el-option value=0 label="none">none</el-option>
                         <el-option
                         v-for="(seg, segId) in segment"
                         :key="segId"
