@@ -88,7 +88,8 @@
                                         </el-row>
                                         <el-row>
                                             <el-col :span="18">
-                                                <p>SegmentGroup: {{segment[targetGridElement.led[ledId].segmentId].name}}</p>
+                                                <p v-if="segment[targetGridElement.led[ledId].segmentId]">SegmentGroup: {{segment[targetGridElement.led[ledId].segmentId].name}}</p>
+                                                <p v-else>SegmentGroup: none</p>
                                             </el-col>
                                             <el-col :span="6">
                                                 <el-button type="info" icon="el-icon-folder" @click="selectLedId=ledId; 
@@ -577,27 +578,25 @@
                                 let index = results.rows.item(i).areaId
                                 let elementId = results.rows.item(i).id
                                 let name = results.rows.item(i).name
-                                let hwId = results.rows.item(i).hwId
-                                that.putButton(index, elementId, name, hwId, 0)
+                                let hwId = results.rows.item(i).hwId;
+                                let parentId = results.rows.item(i).parentId;
+                                that.putButton(index, elementId, name, hwId, 0,parentId);
                             }
                         });
                         // 读取Segment数据
                         context.executeSql('SELECT * FROM Segment WHERE templateId = ? and boardType = ?',[that.templateId,that.boardType],function(context,results){
                             let len = results.rows.length;
-                            // 若没有任何segment分组，则直接新建一个，名称固定为"default"
-                            if (len == 0) {
-                                that.defaultSegmentId = segmentCount
-                                that.putSegment(that.defaultSegmentId, "default", 1)
-                                segmentCount++
-                            } else {
+                            if(len>0)
+                            {
                                 for(let i = 0;i<len;i++){
                                     let segmentId = results.rows.item(i).id
-                                    let name = results.rows.item(i).name
-                                    // 存储default分组的id值
-                                    if (name == 'default') {
-                                        that.defaultSegmentId = segmentId
-                                    }
-                                    that.putSegment(segmentId, name, 0)
+                                    let name = results.rows.item(i).name;
+                                    let parentId = results.rows.item(i).parentId;
+                                    // // 存储default分组的id值
+                                    // if (name == 'default') {
+                                    //     that.defaultSegmentId = segmentId;
+                                    // }
+                                    that.putSegment(segmentId, name, 0,parentId);
                                 }
                             }
                         });
@@ -610,7 +609,8 @@
                                 let name = results.rows.item(i).name
                                 let hwId = results.rows.item(i).hwId
                                 let segmentId = results.rows.item(i).segmentId
-                                that.putLed(index, elementId, name, hwId, segmentId, 0)
+                                let parentId = results.rows.item(i).parentId;
+                                that.putLed(index, elementId, name, hwId, segmentId, 0,parentId);
                             }
                         });
                 });
@@ -624,21 +624,21 @@
                 switch (this.dragElementType) {
                     // 新建一个button
                     case 1:
-                        this.putButton(index, buttonCount, '', '', 1)
+                        this.putButton(index, buttonCount, '', '', 1,0)
                         buttonCount++
                         break
                     // 新建一个led
                     case 2:
-                        this.putLed(index, ledCount, '', '', this.defaultSegmentId, 1)
+                        this.putLed(index, ledCount, '', '', this.defaultSegmentId, 1,0)
                         ledCount++
                         break
                     // 新建一个segment并生成7个相应的led
                     case 3:
-                        this.putSegment(segmentCount, "SegmentGroup" + segmentCount, 1)
+                        this.putSegment(segmentCount, "SegmentGroup" + segmentCount, 1,0);
                         rangeIndex = [index, index-1+this.rowGridNum, index+1+this.rowGridNum, index+2*this.rowGridNum,
                             index-1+3*this.rowGridNum, index+1+3*this.rowGridNum, index+4*this.rowGridNum]
                         for (let i = 0 ; i < rangeIndex.length ; ++i) {
-                            this.putLed(rangeIndex[i], ledCount, '', '', segmentCount, 1)
+                            this.putLed(rangeIndex[i], ledCount, '', '', segmentCount, 1,0)
                             ledCount++
                         }
                         segmentCount++
@@ -648,7 +648,7 @@
                         break
                 }
             },
-            putButton(index, elementId, _name, _hwId, isCreate) {
+            putButton(index, elementId, _name, _hwId, isCreate,_parentId) {
                 let templateId = this.templateId
                 let boardType = this.boardType
                 // button覆盖的index
@@ -678,16 +678,17 @@
 
                 this.button[elementId] = {
                     name: _name,
-                    hwId: _hwId
+                    hwId: _hwId,
+                    parentId:_parentId
                 }
 
                 if (isCreate == 1) {
                     db.transaction(function (context) {  
-                        context.executeSql('INSERT INTO Button (id,areaId,templateId,boardType) VALUES (?,?,?,?)',[elementId,index,templateId,boardType]);
+                        context.executeSql('INSERT INTO Button (id,areaId,templateId,boardType,parentId) VALUES (?,?,?,?,?)',[elementId,index,templateId,boardType,0]);
                     })
                 }
             },
-            putLed(index, elementId, _name, _hwId, _segmentId, isCreate) {
+            putLed(index, elementId, _name, _hwId, _segmentId, isCreate,_parentId) {
                 let templateId = this.templateId
                 let boardType = this.boardType
                
@@ -708,30 +709,33 @@
                     name: _name,
                     hwId: _hwId,
                     segmentId: _segmentId,
+                    parentId:_parentId
                 }
                 // 把新建led添加至给定的segment组别中
-               
-                this.segment[_segmentId].ledMember.push(elementId)
-
+                if(_segmentId!=0){
+                    this.segment[_segmentId].ledMember.push(elementId);
+                }
                 //将LED插入数据库
                 if (isCreate == 1) {
                     db.transaction(function (context) {  
-                        context.executeSql('INSERT INTO LED (id,name,hwId,areaId,segmentId,templateId,boardType) VALUES (?,?,?,?,?,?,?)',[elementId,_name,_hwId,index,_segmentId,templateId,boardType]);
+                        context.executeSql('INSERT INTO LED (id,name,hwId,areaId,segmentId,templateId,boardType,parentId) VALUES (?,?,?,?,?,?,?,?)',[elementId,_name,_hwId,index,_segmentId,templateId,boardType,0]);
                     });
                 }
             },
-            putSegment(segmentId, _name, isCreate) {
+            putSegment(segmentId, _name, isCreate,_parentId) {
                 let templateId = this.templateId
                 let boardType = this.boardType
                 // 新建一个segment组别
                 this.segment[segmentId] = {
+                    id:segmentId,
                     name: _name,
-                    ledMember: []
+                    ledMember: [],
+                    parentId:_parentId
                 }
                 
                 if (isCreate == 1) {
                     db.transaction(function (context) {  
-                        context.executeSql('INSERT INTO Segment (id,name,templateId,boardType) VALUES (?,?,?,?)',[segmentId,_name,templateId,boardType]);
+                        context.executeSql('INSERT INTO Segment (id,name,templateId,boardType,parentId) VALUES (?,?,?,?,?)',[segmentId,_name,templateId,boardType,0]);
                     });
                 }
                 
