@@ -42,10 +42,11 @@
         db.transaction(function (context) {  
           //  tx.executeSql('CREATE TABLE IF NOT EXISTS Temp ("id" INTEGER NOT NULL,"type" INTEGER,"areaId" INTEGER,"elementId" INTEGER,PRIMARY KEY ("id"))');
           context.executeSql('CREATE TABLE IF NOT EXISTS TemplateList ("id" INTEGER NOT NULL,"name" TEXT,PRIMARY KEY ("id"))');
-          context.executeSql('CREATE TABLE IF NOT EXISTS Button ("id" INTEGER NOT NULL,"name" TEXT,"hwId" TEXT,"areaId" INTEGER,"templateId" INTEGER,"boardType" INTEGER,PRIMARY KEY ("id"))');
-          context.executeSql('CREATE TABLE IF NOT EXISTS LED ("id" INTEGER NOT NULL,"name" TEXT,"hwId" TEXT,"areaId" INTEGER,"segmentId" INTEGER,"templateId" INTEGER,"boardType" INTEGER,PRIMARY KEY ("id"))');
+          context.executeSql('CREATE TABLE IF NOT EXISTS Button ("id" INTEGER NOT NULL,"name" TEXT,"hwId" TEXT,"areaId" INTEGER,"templateId" INTEGER,"boardType" INTEGER,"parentId" INTEGER,PRIMARY KEY ("id"))');
+          context.executeSql('CREATE TABLE IF NOT EXISTS LED ("id" INTEGER NOT NULL,"name" TEXT,"hwId" TEXT,"areaId" INTEGER,"segmentId" INTEGER,"templateId" INTEGER,"boardType" INTEGER,"parentId" INTEGER,PRIMARY KEY ("id"))');
           context.executeSql('CREATE TABLE IF NOT EXISTS ButtonMapping ("id" INTEGER NOT NULL,"name" TEXT,"unitname" TEXT,"buttonMode" TEXT,"templateId" INTEGER,"buttonId" INTEGER,PRIMARY KEY ("id"))');
-          context.executeSql('CREATE TABLE IF NOT EXISTS Segment ("id" INTEGER NOT NULL,"name" TEXT,"templateId" INTEGER,"boardType" INTEGER,PRIMARY KEY ("id"))');
+          context.executeSql('CREATE TABLE IF NOT EXISTS Segment ("id" INTEGER NOT NULL,"name" TEXT,"templateId" INTEGER,"boardType" INTEGER,"parentId" INTEGER, PRIMARY KEY ("id"))');
+          context.executeSql('CREATE TABLE IF NOT EXISTS Groups ("id" INTEGER NOT NULL,"name" TEXT,"templateId" INTEGER,"boardType" INTEGER,"parentId" INTEGER, PRIMARY KEY ("id"))');
           context.executeSql('SELECT * FROM TemplateList',[],function(context,results){
             let len = results.rows.length;
             for(let i = 0;i<len;i++){
