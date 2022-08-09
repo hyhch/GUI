@@ -13,7 +13,7 @@
             </div>
         </el-col>
         
-        <el-col :span="22" style="overflow-x:auto">
+        <el-col :span="22" style="overflow-x:auto" v-loading="loading">
             <div :style="radioClass">
                 <el-radio v-model="boardType" label="1" @change="loadBoard()">PS</el-radio>
                 <el-radio v-model="boardType" label="2" @change="loadBoard()">OS</el-radio>
@@ -160,12 +160,13 @@
                         <el-button @click="dialogSaveVisible=false">取消</el-button>
                     </el-form>
                 </el-dialog>
+
                 <el-dialog title="请输入导出路径" :visible.sync="dialogExportVisible">
                     <el-form :inline="true">
                         <el-form-item label="路径">
                             <el-input v-model="exportPath"></el-input>
                         </el-form-item>
-                        <el-button type="primary" @click="testAxios()">确定</el-button>
+                        <el-button type="primary" @click=" dialogExportVisible=false; testAxios();">确定</el-button>
                         <el-button @click="dialogExportVisible=false">取消</el-button>
                     </el-form>
                 </el-dialog>
@@ -205,6 +206,7 @@
         name: 'templateDemo2',
         data() {
             return {
+                loading: false,
                 exportPath:'',
                 templateName:'',
                 boardType: "1",
@@ -212,8 +214,6 @@
                 templateId:this.$route.params.templateId,
                 defaultSegmentId: 0,
                 dragElementType: 1,
-                
-                //导出弹窗，默认关闭
                 dialogExportVisible:false,
                 //保存弹窗默认关闭
                 dialogSaveVisible:false,
@@ -286,6 +286,7 @@
                 button: {},
                 led: {},
                 segment: {},
+
                 
                 // 在表单中对某一Button进行单独操作时更新该值
                 selectButtonId: '',
@@ -359,47 +360,167 @@
         methods: {
             testAxios() {
                 // 向后端传递组件参数
-                let buttonList = []
-                let ledList = []
-                let segmentList = []
-                // 生成组件列表
-                for (let buttonId in this.button) {
-                    buttonList.push(this.button[buttonId])
-                }
-                for (let ledId in this.led) {
-                    ledList.push({
-                        name: this.led[ledId].name,
-                        hwId: this.led[ledId].hwId
+                let psButtonList = []
+                let osButtonList = []
+                let psLedList = []
+                let osLedList = []
+                let psSegmentList = []
+                let osSegmentList = []
+
+                this.loading = true
+
+                let _this = this
+                db.transaction(function (context) {
+                    context.executeSql('SELECT name, hwId, boardType FROM Button WHERE templateId = ?', 
+                        [_this.templateId], function (context, results) {
+                            for (let i = 0 ; i < results.rows.length ; ++i) {
+                                if (results.rows[i].boardType == 1) {
+                                    psButtonList.push({
+                                        name: results.rows[i].name,
+                                        hwId: results.rows[i].hwId
+                                    })
+                                } else {
+                                    osButtonList.push({
+                                        name: results.rows[i].name,
+                                        hwId: results.rows[i].hwId
+                                    })
+                                }
+                            }
+                            axios ({
+                                method: 'post',
+                                url: '/save/touchButton',
+                                data: {
+                                    psButton: psButtonList,
+                                    osButton: osButtonList
+                                }
+                                }).then(function (response) {
+                                    console.log(response.data)
+                            });
+                            axios ({
+                                method: 'get',
+                                url: '/save/exportFile',
+                                params: {
+                                    exportPath: _this.exportPath
+                                }
+                                }).then(function (response) {
+                                    if (response.data == "SAVE SUCCESSFULLY") {
+                                        _this.loading = false
+                                        _this.$message({
+                                            message: '导出成功',
+                                            type: 'success'
+                                        });
+                                    }
+                            });
+
+                    });
+
+                    context.executeSql('SELECT name, hwId, boardType FROM LED WHERE templateId = ?', 
+                        [_this.templateId], function (context, results) {
+                            for (let i = 0 ; i < results.rows.length ; ++i) {
+                                if (results.rows[i].boardType == 1) {
+                                    psLedList.push({
+                                        name: results.rows[i].name,
+                                        hwId: results.rows[i].hwId
+                                    })
+                                } else {
+                                    osLedList.push({
+                                        name: results.rows[i].name,
+                                        hwId: results.rows[i].hwId
+                                    })
+                                }
+                            }
+                            axios ({
+                                method: 'post',
+                                url: '/save/physicalLed',
+                                data: {
+                                    psLed: psLedList,
+                                    osLed: osLedList
+                                }
+                                }).then(function (response) {
+                                    console.log(response.data)
+                            });
+                            axios ({
+                                method: 'get',
+                                url: '/save/exportFile',
+                                params: {
+                                    exportPath: _this.exportPath
+                                }
+                                }).then(function (response) {
+                                    if (response.data == "SAVE SUCCESSFULLY") {
+                                        _this.loading = false
+                                        _this.$message({
+                                            message: '导出成功',
+                                            type: 'success'
+                                        });
+                                    }
+                            });
+                    });
+
+                    // 提取PS以及OS板的led与segment的join数据，且按segmentId排序
+                    context.executeSql('SELECT LED.name AS ledMemberName, Segment.name AS segmentName, Segment.id AS segmentId, LED.boardType AS boardType FROM LED \
+                        INNER JOIN Segment ON LED.segmentId = Segment.id WHERE LED.templateId = ? ORDER BY segmentId ASC', [_this.templateId], function(context, results) {
+                            let lastSegmentId = ''
+                            for (let i = 0 ; i < results.rows.length ; ++i) {
+                                if (results.rows[i].segmentName == 'default') {
+                                    continue
+                                } else {
+                                    // 当一条数据的segmentId改变时，新增一个psSegmentList项
+                                    // 由于results.rows所获取的数据已按segmentId排序，所以可以保证新增psSegmentList项时不重复
+                                    if (results.rows[i].boardType == 1) {
+                                        if (results.rows[i].segmentId != lastSegmentId) {
+                                            psSegmentList.push({
+                                                name: results.rows[i].segmentName,
+                                                ledMemberName: [results.rows[i].ledMemberName]
+                                            })
+                                            lastSegmentId = results.rows[i].segmentId
+                                        } else {
+                                            psSegmentList[psSegmentList.length - 1].ledMemberName.push(results.rows[i].ledMemberName)
+                                        }
+                                    } else {
+                                        if (results.rows[i].segmentId != lastSegmentId) {
+                                            osSegmentList.push({
+                                                name: results.rows[i].segmentName,
+                                                ledMemberName: [results.rows[i].ledMemberName]
+                                            })
+                                            lastSegmentId = results.rows[i].segmentId
+                                        } else {
+                                            osSegmentList[osSegmentList.length - 1].ledMemberName.push(results.rows[i].ledMemberName)
+                                        }
+                                    }
+                                }
+                            }
+                            axios ({
+                                method: 'post',
+                                url: '/save/virtualSegment',
+                                data: {
+                                    psSegment: psSegmentList,
+                                    osSegment: osSegmentList
+                                }
+                                }).then(function (response) {
+                                    console.log(response.data)
+                            });
+                            axios ({
+                                method: 'get',
+                                url: '/save/exportFile',
+                                params: {
+                                    exportPath: _this.exportPath
+                                }
+                                }).then(function (response) {
+                                    if (response.data == "SAVE SUCCESSFULLY") {
+                                        _this.loading = false
+                                        _this.$message({
+                                            message: '导出成功',
+                                            type: 'success'
+                                        });
+                                    }
+                            });
                     })
-                }
-                for (let segmentId in this.segment) {
-                    if (this.segment[segmentId].name=='default') {
-                        continue
-                    }
-                    let newSegment = {
-                        name: this.segment[segmentId].name,
-                        ledMemberName: []
-                    }
-                    for (let i = 0 ; i < this.segment[segmentId].ledMember.length ; ++i) {
-                        newSegment.ledMemberName.push(this.led[this.segment[segmentId].ledMember[i]].name)
-                    }
-                    segmentList.push(newSegment)
-                }
-                console.log(this.boardType);
-                console.log(this.exportPath);
-                axios ({
-                    method: 'post',
-                    url: '/save',
-                    data: {
-                        boardType: this.boardType,
-                        button: buttonList,
-                        led: ledList,
-                        segment: segmentList,
-                        exportPath:this.exportPath
-                    }
-                    }).then(function (response) {
-                        console.log(response.data)
+
+                    
+                    
                 });
+
+               
             },
             pageInit(){
                 this.button = {};
@@ -461,7 +582,6 @@
                             }
                         });
                         // 读取Segment数据
-                        console.log(that.templateId)
                         context.executeSql('SELECT * FROM Segment WHERE templateId = ? and boardType = ?',[that.templateId,that.boardType],function(context,results){
                             let len = results.rows.length;
                             // 若没有任何segment分组，则直接新建一个，名称固定为"default"
@@ -819,3 +939,4 @@
     }
 
 </style>
+
