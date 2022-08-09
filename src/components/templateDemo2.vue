@@ -162,9 +162,18 @@
                 </el-dialog>
 
                 <el-dialog title="请输入导出路径" :visible.sync="dialogExportVisible">
-                    <el-form :inline="true">
-                        <el-form-item label="路径">
-                            <el-input v-model="exportPath"></el-input>
+                    <el-form>
+                        <el-form-item label="相对路径">
+                            <el-input v-model="exportRelativePath" :disabled="fixPath!=0"></el-input>
+                            <el-radio-group v-model="fixPath">
+                                <el-radio :label="3">文档</el-radio>
+                                <el-radio :label="2">下载</el-radio>
+                                <el-radio :label="1">桌面</el-radio>
+                                <el-radio :label="0">其它</el-radio>
+                            </el-radio-group>
+                        </el-form-item>
+                        <el-form-item label="文件名">
+                            <el-input v-model="exportFileName"></el-input>
                         </el-form-item>
                         <el-button type="primary" @click=" dialogExportVisible=false; testAxios();">确定</el-button>
                         <el-button @click="dialogExportVisible=false">取消</el-button>
@@ -172,7 +181,7 @@
                 </el-dialog>
                 <br />
                 <el-button type="primary" @click="ifDialogSaveVisible"> 保存 </el-button>
-                <el-button type="primary" @click="dialogExportVisible=true"> 导出 </el-button>
+                <el-button type="primary" @click="dialogExportVisible=true; exportRelativePath=''"> 导出 </el-button>
             </div>
         </el-col>
     </div>
@@ -207,7 +216,9 @@
         data() {
             return {
                 loading: false,
-                exportPath:'',
+                fixPath: 1,
+                exportRelativePath:'',
+                exportFileName: '',
                 templateName:'',
                 boardType: "1",
                 //templateId：默认为0，保存后根据保存的id改变
@@ -366,9 +377,17 @@
                 let osLedList = []
                 let psSegmentList = []
                 let osSegmentList = []
-
+                
                 this.loading = true
-
+                if (this.fixPath == 3) {
+                    this.exportRelativePath = 'document'
+                } else if (this.fixPath == 2) {
+                    this.exportRelativePath = 'download'
+                } else if(this.fixPath == 1) {
+                    this.exportRelativePath = 'desktop'
+                } else {
+                    1 + 1
+                }
                 let _this = this
                 db.transaction(function (context) {
                     context.executeSql('SELECT name, hwId, boardType FROM Button WHERE templateId = ?', 
@@ -400,7 +419,8 @@
                                 method: 'get',
                                 url: '/save/exportFile',
                                 params: {
-                                    exportPath: _this.exportPath
+                                    relativePath: _this.exportRelativePath,
+                                    fileName: _this.exportFileName
                                 }
                                 }).then(function (response) {
                                     if (response.data == "SAVE SUCCESSFULLY") {
@@ -443,7 +463,8 @@
                                 method: 'get',
                                 url: '/save/exportFile',
                                 params: {
-                                    exportPath: _this.exportPath
+                                    relativePath: _this.exportRelativePath,
+                                    fileName: _this.exportFileName
                                 }
                                 }).then(function (response) {
                                     if (response.data == "SAVE SUCCESSFULLY") {
@@ -503,7 +524,8 @@
                                 method: 'get',
                                 url: '/save/exportFile',
                                 params: {
-                                    exportPath: _this.exportPath
+                                    relativePath: _this.exportRelativePath,
+                                    fileName: _this.exportFileName
                                 }
                                 }).then(function (response) {
                                     if (response.data == "SAVE SUCCESSFULLY") {
@@ -939,4 +961,5 @@
     }
 
 </style>
+
 
