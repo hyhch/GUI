@@ -824,8 +824,6 @@
                         
                     } else {
                         // 修改button信息
-                        this.button[buttonId].name = targetButton[buttonId].name
-                        this.button[buttonId].hwId = targetButton[buttonId].hwId
                         db.transaction(function (context) { 
                             context.executeSql('UPDATE Button SET name=?,hwId=? WHERE id =?',[targetButton[buttonId].name,targetButton[buttonId].hwId,buttonId]);
                         });
@@ -836,25 +834,16 @@
                 for (let ledId in targetLed) {
                     if (targetLed[ledId].toDelete==1) {
                         // 删除指定的led
-                        delete this.led[ledId]
                         db.transaction(function (context) { 
                             context.executeSql('DELETE FROM LED WHERE id =?',[ledId]);
                         });
                     } else {
                         // 修改led信息
-                        this.led[ledId].name = targetLed[ledId].name
-                        this.led[ledId].hwId = targetLed[ledId].hwId
                         
                         if (this.led[ledId].toAlterSegment == 1) {
                             // 更改led分组
-                            let originSegmentId = this.led[ledId].segmentId
-                            let segmentId = targetLed[ledId].segmentId
-                            this.led[ledId].segmentId = segmentId
-                            let originLedIdIndex = this.segment[originSegmentId].ledMember.indexOf(ledId)
-                            this.segment[originSegmentId].ledMember.splice(originLedIdIndex, 1)
-                            this.segment[segmentId].ledMember.push(ledId)
                             db.transaction(function (context) { 
-                                context.executeSql('UPDATE LED SET segmentId=? WHERE id=?',[segmentId, ledId]);
+                                context.executeSql('UPDATE LED SET segmentId=? WHERE id=?',[targetLed[ledId].segmentId, ledId]);
                             })
                         }
 
@@ -966,5 +955,6 @@
     }
 
 </style>
+
 
 
