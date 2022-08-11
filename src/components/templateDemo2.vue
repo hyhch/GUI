@@ -1,7 +1,7 @@
 <template>
     <div>
-        <el-col :span="2">
-       
+        <el-col :span="2" style="background-color:#F2F6FC;height:800px;text-align: center;">
+            <div style="text-align:center;margin-bottom: 20px;font-size: 18px;">elements</div>
             <div>
                 <el-button draggable="true" id="button" @dragstart="dragElementType=1" @dragend="dragElementType=0" type="success">button</el-button>
             </div>
