@@ -2,15 +2,16 @@
     <div>
         <el-col :span="2" style="background-color:#F2F6FC;height:800px;text-align: center;">
             <div style="text-align:center;margin-bottom: 20px;font-size: 18px;">elements</div>
-            <div>
-                <el-button draggable="true" id="button" @dragstart="dragElementType=1" @dragend="dragElementType=0" type="success">button</el-button>
+            <div draggable="true" id="button" @dragstart="dragElementType=1" @dragend="dragElementType=0">
             </div>
-            <div style="color:blue;margin:10px">
-                <el-button type="primary" icon="el-icon-s-opportunity" circle draggable="true" id="LED" @dragstart="dragElementType=2" @dragend="dragElementType=0"></el-button>LED
+            <p style="margin-bottom:20px">Button</p>
+            <div style="color:blue;margin:10px;font-size: 35px;">
+                <i class="el-icon-s-opportunity" circle draggable="true" id="LED" @dragstart="dragElementType=2" @dragend="dragElementType=0"></i>
             </div>
+            <p style="margin-bottom:20px">LED</p>
             <div draggable="true" id="segment" @dragstart="dragElementType=3" @dragend="dragElementType=0">
                 <img src="../assets/1.png" style="width:50px;height:100px">
-                segment
+                Segment
             </div>
         </el-col>
         
