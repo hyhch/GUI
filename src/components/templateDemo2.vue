@@ -32,6 +32,16 @@
                     </el-table>
                     <el-button type="primary" icon="el-icon-circle-plus-outline" @click="dialogAddGroupVisible = true">新增group</el-button>
                 </el-dialog>
+                <!-- group删除提示 -->
+                <el-dialog
+                    title="提示"
+                    :visible.sync="dialogDeleteGroupVisible">
+                    <span>确认删除？</span>
+                    <span slot="footer" class="dialog-footer">
+                        <el-button type="primary" @click="groupDeleteConfirm(groupId)">确定</el-button>
+                        <el-button @click="dialogDeleteGroupVisible=false">取消</el-button>
+                    </span>
+                </el-dialog>
                 <!-- 新增group信息 -->
                 <el-dialog title="请输入group名称" :visible.sync="dialogAddGroupVisible">
                     <el-form>
@@ -262,6 +272,7 @@
                 dragElementType: 1,
                 dialogEditGroupVisible:false,
                 dialogAddGroupVisible:false,
+                dialogDeleteGroupVisible:false,
                 //编辑group弹窗，默认关闭
                 dialogGroupVisible:false,
                 dialogExportVisible:false,
@@ -814,7 +825,6 @@
                 db.transaction(function (context) { 
                     context.executeSql('INSERT INTO Groups (name,templateId,boardType) VALUES (?,?,?)',[name,templateId,boardType]);
                 });
-                this.groupList = [];
                 this.loadGroup();
                 this.dialogAddGroupVisible = false;
             },
@@ -822,6 +832,7 @@
             loadGroup(){
                 let templateId = this.templateId;
                 let boardType = this.boardType;
+                this.groupList = [];
                 let that = this;
                 db.transaction(function (context) { 
                     context.executeSql('SELECT * FROM Groups WHERE templateId = ? and boardType = ?',[templateId,boardType],function(context,results){
@@ -917,6 +928,26 @@
                     });
                 });
                 this.dialogEditGroupVisible = true;
+            },
+            //删除group
+            groupDelete(index, row){
+                this.groupId = row.id;
+                this.dialogDeleteGroupVisible = true;
+            },
+            //点击删除group后确认
+            groupDeleteConfirm(groupId){
+                let groupIdTmp = groupId;
+                db.transaction(function (context) { 
+                    context.executeSql('DELETE FROM Groups WHERE id = ?',[groupIdTmp]);
+                    context.executeSql('UPDATE Button SET parentId=0 WHERE parentId =?',[groupIdTmp]);
+                    context.executeSql('UPDATE LED SET parentId=0 WHERE parentId =?',[groupIdTmp]);
+                });
+                this.dialogDeleteGroupVisible = false;
+                this.loadGroup();
+                this.$message({
+                    message: '删除成功！',
+                type: 'success'
+                });
             },
             // 判断是否显示表单，并初始化表单绑定的数据
             ifGridDialogFormVisible(index) {
@@ -1023,7 +1054,7 @@
                             context.executeSql('UPDATE Button SET templateId=? WHERE templateId =0',[templateId]);
                             context.executeSql('UPDATE LED SET templateId=? WHERE templateId =0',[templateId]);
                             context.executeSql('UPDATE Segment SET templateId=? WHERE templateId =0',[templateId]);
-                            
+                            context.executeSql('UPDATE Groups SET templateId=? WHERE templateId =0',[templateId]);
                             location.reload();
                         }
                     });
