@@ -17,6 +17,39 @@
             <div :style="radioClass">
                 <el-radio v-model="boardType" label="1" @change="loadBoard()">PS</el-radio>
                 <el-radio v-model="boardType" label="2" @change="loadBoard()">OS</el-radio>
+                <el-button @click="dialogGroupVisible = true">编辑group信息</el-button>
+                <!-- 编辑group信息 -->
+                <el-dialog title="group信息" :visible.sync="dialogGroupVisible" width="500">
+                    <el-table :data="groupList" height="300">
+                        <el-table-column property="id" label="id" width="150"></el-table-column>
+                        <el-table-column property="name" label="name" width="300"></el-table-column>
+                        <el-table-column label="操作" fixed="right">
+                            <template slot-scope="scope">
+                                <el-button size="medium" @click="groupEdit(scope.$index, scope.row)">编辑</el-button>
+                                <el-button size="medium" type="danger" @click="groupDelete(scope.$index, scope.row)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <el-button type="primary" icon="el-icon-circle-plus-outline" @click="dialogAddGroupVisible = true">新增group</el-button>
+                </el-dialog>
+                <!-- 新增group信息 -->
+                <el-dialog title="请输入group名称" :visible.sync="dialogAddGroupVisible">
+                    <el-form>
+                        <el-form-item label="name">
+                            <el-input v-model="newGroupName"></el-input>
+                        </el-form-item>
+                        <el-button type="primary" @click="putGroup()">确定</el-button>
+                        <el-button @click="dialogAddGroupVisible=false">取消</el-button>
+                    </el-form>
+                </el-dialog>
+                <!-- group双向穿梭框 -->
+                <el-dialog title="编辑group" :visible.sync="dialogEditGroupVisible">
+                    <el-form>
+                        <el-transfer v-model="groupContent" :data="availableElements" :titles="['可用元素', 'group']"></el-transfer>
+                        <el-button type="primary" @click="submitGroup()">确定</el-button>
+                        <el-button @click="dialogAddGroupVisible=false">取消</el-button>
+                    </el-form>
+                </el-dialog>
             </div>
             <div id="MainArea" :style="workspaceDivClass">
                 <div :style="iconDivClass">
@@ -177,7 +210,7 @@
                         <el-form-item label="文件名">
                             <el-input v-model="exportFileName"></el-input>
                         </el-form-item>
-                        <el-button type="primary" @click=" dialogExportVisible=false; testAxios();">确定</el-button>
+                        <el-button type="primary" @click="dialogExportVisible=false; testAxios();">确定</el-button>
                         <el-button @click="dialogExportVisible=false">取消</el-button>
                     </el-form>
                 </el-dialog>
@@ -227,6 +260,10 @@
                 templateId:this.$route.params.templateId,
                 defaultSegmentId: 0,
                 dragElementType: 1,
+                dialogEditGroupVisible:false,
+                dialogAddGroupVisible:false,
+                //编辑group弹窗，默认关闭
+                dialogGroupVisible:false,
                 dialogExportVisible:false,
                 //保存弹窗默认关闭
                 dialogSaveVisible:false,
@@ -299,8 +336,12 @@
                 button: {},
                 led: {},
                 segment: {},
-
-                
+                //存储group信息的数组
+                groupList:[],
+                groupContent:[],
+                availableElements:[],
+                newGroupName:'',
+                groupId:0,
                 // 在表单中对某一Button进行单独操作时更新该值
                 selectButtonId: '',
 
@@ -551,6 +592,8 @@
                 this.led = {};
                 this.segment={}
                 this.gridElementOverlap = {};
+                this.groupList = [];
+                this.loadGroup();
                 // this.targetGridElement = {
                 //     button: {},
                 //     led: {}
@@ -763,6 +806,118 @@
                 }
                 
             },
+            //新增group函数，先插入，然后重新读取group列表
+            putGroup(){
+                let name = this.newGroupName;
+                let templateId = this.templateId;
+                let boardType = this.boardType;
+                db.transaction(function (context) { 
+                    context.executeSql('INSERT INTO Groups (name,templateId,boardType) VALUES (?,?,?)',[name,templateId,boardType]);
+                });
+                this.groupList = [];
+                this.loadGroup();
+                this.dialogAddGroupVisible = false;
+            },
+            //读取group列表
+            loadGroup(){
+                let templateId = this.templateId;
+                let boardType = this.boardType;
+                let that = this;
+                db.transaction(function (context) { 
+                    context.executeSql('SELECT * FROM Groups WHERE templateId = ? and boardType = ?',[templateId,boardType],function(context,results){
+                        let len = results.rows.length;
+                            for(let i = 0;i<len;i++){
+                                let _id = results.rows.item(i).id;
+                                let _name = results.rows.item(i).name;
+                                that.groupList.push({id:_id,name:_name});
+                            }
+                    });
+                });
+            },
+            submitGroup(){
+                let groupIdTmp = this.groupId;
+                console.log("目前可用元素"+this.availableElements);
+                console.log("目前group元素"+this.groupContent);
+                for(let item in this.availableElements){
+                    let element = this.availableElements[item];
+                    console.log(element);
+                    if(element.type==1){
+                        db.transaction(function (context) { 
+                            context.executeSql('UPDATE Button SET parentId=0 WHERE id =?',[element.id]);
+                        });
+                    }else{
+                        db.transaction(function (context) { 
+                            context.executeSql('UPDATE LED SET parentId=0 WHERE id =?',[element.id]);
+                        });
+                    }
+                }
+                for(let item in this.groupContent){
+                    let element = this.groupContent[item];
+                    console.log(element);
+                    if(element.split('n').length>1){
+                        element = element.split('n')[1];
+                        db.transaction(function (context) { 
+                            context.executeSql('UPDATE Button SET parentId=? WHERE id =?',[groupIdTmp,element]);
+                        });
+                    }else{
+                        element = element.split('D')[1];
+                        db.transaction(function (context) { 
+                            context.executeSql('UPDATE LED SET parentId=? WHERE id =?',[groupIdTmp,element]);
+                        });
+                    }      
+                }
+                this.$message({
+                    message: '编辑成功！',
+                type: 'success'
+            });
+            this.dialogEditGroupVisible = false;
+            },
+            //点击编辑group
+            groupEdit(index, row) {
+                console.log(index, row);
+                this.groupId = row.id;
+                let groupIdTmp = row.id;
+                let templateId = this.templateId;
+                let boardType = this.boardType;
+                this.availableElements =[];
+                this.groupContent = [];
+                let that = this;
+                db.transaction(function (context) { 
+                    context.executeSql('SELECT * FROM Button WHERE templateId = ? and boardType = ?',[templateId,boardType],function(context,results){
+                        let len = results.rows.length;
+                            for(let i = 0;i<len;i++){
+                                let _id = results.rows.item(i).id;
+                                let _name = results.rows.item(i).name;
+                                //LED的type为2，Button的type为1
+                                let _type = 1;
+                                let _parentId = results.rows.item(i).parentId;
+                                if(_parentId==0 || _parentId==groupIdTmp){
+                                    that.availableElements.push({key:"Button"+_id,label:"Button:"+_name,type:_type,id:_id});
+                                    if(_parentId == groupIdTmp){
+                                        that.groupContent.push("Button"+_id);
+                                    }
+                                } 
+                            }
+                    });
+                    context.executeSql('SELECT * FROM LED WHERE templateId = ? and boardType = ?',[templateId,boardType],function(context,results){
+                        let len = results.rows.length;
+                            for(let i = 0;i<len;i++){
+                                let _id = results.rows.item(i).id;
+                                let _name = results.rows.item(i).name;
+                                //LED的type为2，Button的type为1
+                                let _type = 2;
+                                let _parentId = results.rows.item(i).parentId;
+                                if(_parentId==0 || _parentId==groupIdTmp){
+                                    that.availableElements.push({key:"LED"+_id,label:"LED:"+_name,type:_type,id:_id});
+                                    if(_parentId == groupIdTmp){
+                                        that.groupContent.push("LED"+_id);
+                                    }
+                                } 
+                            }
+                    });
+                });
+                this.dialogEditGroupVisible = true;
+            },
             // 判断是否显示表单，并初始化表单绑定的数据
             ifGridDialogFormVisible(index) {
                 // targetGrid读取gridElementOverlap对象，获得了选中网格中的所有组件。
@@ -918,6 +1073,8 @@
                     this.workspaceDivClass.width = width - 10 + '%'
                 }
             },
+
+            
         }
     }
 </script>
