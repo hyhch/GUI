@@ -58,7 +58,7 @@
                     <el-form>
                         <el-transfer v-model="groupContent" :data="availableElements" :titles="['可用元素', 'group']"></el-transfer>
                         <el-button type="primary" @click="submitGroup()">确定</el-button>
-                        <el-button @click="dialogAddGroupVisible=false">取消</el-button>
+                        <el-button @click="dialogEditGroupVisible=false">取消</el-button>
                     </el-form>
                 </el-dialog>
             </div>
