@@ -2,13 +2,14 @@
     <div>
         <el-col :span="2">
        
-            <div draggable="true" id="button" @dragstart="dragElementType=1" @dragend="dragElementType=0">
-                button
+            <div>
+                <el-button draggable="true" id="button" @dragstart="dragElementType=1" @dragend="dragElementType=0" type="success">button</el-button>
             </div>
-            <div draggable="true" id="LED" @dragstart="dragElementType=2" @dragend="dragElementType=0">
-                LED
+            <div style="color:blue;margin:10px">
+                <el-button type="primary" icon="el-icon-s-opportunity" circle draggable="true" id="LED" @dragstart="dragElementType=2" @dragend="dragElementType=0"></el-button>LED
             </div>
             <div draggable="true" id="segment" @dragstart="dragElementType=3" @dragend="dragElementType=0">
+                <img src="../assets/1.png" style="width:50px;height:100px">
                 segment
             </div>
         </el-col>
@@ -623,7 +624,7 @@
                             width: this.gridWidth + 'px',
                             height: this.gridWidth + 'px',
                             display: 'inline-block',
-                            border: '1px solid',
+                            border: '0.2px dashed gray',
                             'box-sizing': 'border-box',
                             'font-size': '1px',
                             float: 'left',
@@ -1127,19 +1128,20 @@
     #button {
         width: 88px;
         height:88px;
-        border:1px solid #aaaaaa;
+        /* border:1px solid #aaaaaa; */
     }
 
     #LED {
         width: 38px;
         height:38px;
-        border:1px solid #aaaaaa;
+        /* border:1px solid #aaaaaa; */
     }
 
     #segment {
+        margin: 10px;
         width: 88px;
         height:150px;
-        border:1px solid #aaaaaa;
+        /* border:1px solid #aaaaaa; */
     }
 
 </style>
