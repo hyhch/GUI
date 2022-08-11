@@ -61,8 +61,10 @@
                         <el-button @click="dialogEditGroupVisible=false">取消</el-button>
                     </el-form>
                 </el-dialog>
+                <el-button @click="showSegmentManagementDialog">管理Segment</el-button>
             </div>
             <div id="MainArea" :style="workspaceDivClass">
+                
                 <div :style="iconDivClass">
                     <span>
                         <i class="el-icon-zoom-in" @click="zoomIn"></i>
@@ -79,6 +81,10 @@
                     @dragover="ondragover($event)" @drop="ondrop($event, index-1)"
                     @click="ifGridDialogFormVisible(index-1)"
                 ></div>
+
+                <br />
+                <el-button type="primary" @click="ifDialogSaveVisible"> 保存 </el-button>
+                <el-button type="primary" @click="dialogExportVisible=true; exportRelativePath=''"> 导出 </el-button>
 
                 <!-- 更改某一网格所有组件属性的表单 -->
                 <el-dialog title="设置属性" :visible.sync="dialogFormVisible">
@@ -180,6 +186,18 @@
                     </span>
                 </el-dialog>
 
+                <!-- Segment删除提示 -->
+                <el-dialog
+                    title="提示"
+                    :visible.sync="dialogDeleteSegmentVisible">
+                    <span>确认删除编号为 {{manageSegmentId}} 的Segment组？</span><br/>
+                    <span>此处该操作不可逆</span>
+                    <span slot="footer" class="dialog-footer">
+                        <el-button type="primary" @click="deleteSegment(manageSegmentId)">确定</el-button>
+                        <el-button @click="dialogDeleteSegmentVisible=false">取消</el-button>
+                    </span>
+                </el-dialog>
+
                 <!-- 下拉菜单选择led所在segment分组 -->
                 <el-dialog title="选择segment分组" :visible.sync="dialogSelectSegmentVisible">
                     <el-select v-model="selectSegmentId" placeholder="请选择">
@@ -225,9 +243,50 @@
                         <el-button @click="dialogExportVisible=false">取消</el-button>
                     </el-form>
                 </el-dialog>
-                <br />
-                <el-button type="primary" @click="ifDialogSaveVisible"> 保存 </el-button>
-                <el-button type="primary" @click="dialogExportVisible=true; exportRelativePath=''"> 导出 </el-button>
+
+                <!-- Segment管理弹窗 -->
+                <el-dialog title="管理Segment" :visible.sync="dialogSegmentManagementVisible">
+                    <el-table
+                    :data="segmentList"
+                    stripe
+                    style="width: 100%">
+                        <el-table-column
+                            prop="id"
+                            label="id">
+                        </el-table-column>
+                        <el-table-column
+                            prop="name"
+                            label="名称">
+                        </el-table-column>
+                        <el-table-column label="操作">
+                            <template slot-scope="scope">
+                                <el-button size="mini" @click="manageSegmentId=scope.row.id;showSegmentChildDialog();">编辑</el-button>
+                                <el-button size="mini" type="danger" @click="dialogDeleteSegmentVisible=true; manageSegmentId=scope.row.id;">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                   
+                        <el-button @click="newSegmentName=''; dialogSegmentNameVisible=true">新增</el-button>
+                    <el-button type="primary" @click="dialogSegmentManagementVisible=false">返回</el-button>
+                </el-dialog>
+
+                <!-- 为新建Segment取名 -->
+                <el-dialog title="填写名称" :visible.sync="dialogSegmentNameVisible">
+                    <el-input v-model="newSegmentName" placeholder="请输入新增Segment组的名称"></el-input>
+                    <div>
+                        <el-button size="mini" type="text" @click="dialogSegmentNameVisible=false;">取消</el-button>
+                        <el-button type="primary" size="mini" @click="putSegment(segmentCount, newSegmentName, 1, defaultSegmentId);
+                            dialogSegmentNameVisible=false; segmentList.push({id: segmentCount, name: newSegmentName}); segmentCount++;">确定</el-button>
+                    </div>
+                </el-dialog>
+
+                <!-- 管理Segment子组件的穿梭框 -->
+                <el-dialog title="管理子组件" :visible.sync="dialogSegmentChildVisible">
+                    <el-transfer :data="availableSegmentChild" v-model="segmentChildMember"></el-transfer>
+                    <el-button type="primary" @click="alterSegmentChild(); dialogSegmentChildVisible=false">确定</el-button>
+                    <el-button type="text" @click="dialogSegmentChildVisible=false">取消</el-button>
+                </el-dialog>
+
             </div>
         </el-col>
     </div>
@@ -235,32 +294,17 @@
 
 <script>
     import axios from 'axios';
-    var buttonCount = 1;
-    var ledCount = 1;
-    var segmentCount = 1;
+
     var db = openDatabase('BSHdb', '1.0', 'Test DB', 2 * 1024 * 1024);
-    db.transaction(function (context) {
-        context.executeSql('SELECT MAX(bt.id) AS max_result FROM Button as bt', [], function (context, results) {
-            if (results.rows.length > 0) {
-                buttonCount = results.rows.item(0).max_result+1;
-            }
-        });
-        context.executeSql('SELECT MAX(led.id) AS max_result FROM LED as led', [], function (context, results) {
-            if (results.rows.length > 0) {
-                ledCount = results.rows.item(0).max_result+1;
-            }
-        });
-        context.executeSql('SELECT MAX(seg.id) AS max_result FROM Segment as seg', [], function (context, results) {
-            if (results.rows.length > 0) {
-                segmentCount = results.rows.item(0).max_result+1;
-            }
-        });
-    });
+    
     
     export default {
         name: 'templateDemo2',
         data() {
             return {
+                buttonCount: 1,
+                ledCount: 1,
+                segmentCount: 1,
                 loading: false,
                 fixPath: 1,
                 exportRelativePath:'',
@@ -269,25 +313,29 @@
                 boardType: "1",
                 //templateId：默认为0，保存后根据保存的id改变
                 templateId:this.$route.params.templateId,
+                //未被设置Segment分组的led的默认segmentId
                 defaultSegmentId: 0,
                 dragElementType: 1,
-                dialogEditGroupVisible:false,
-                dialogAddGroupVisible:false,
-                dialogDeleteGroupVisible:false,
-                //编辑group弹窗，默认关闭
-                dialogGroupVisible:false,
                 dialogExportVisible:false,
                 //保存弹窗默认关闭
                 dialogSaveVisible:false,
                 // 确认删除弹窗
                 dialogDeleteButtonVisible: false,
                 dialogDeleteLedVisible: false,
+                dialogDeleteSegmentVisible: false,
                 // 表单弹窗默认关闭
                 dialogFormVisible: false,
+                dialogEditGroupVisible:false,
+                dialogAddGroupVisible:false,
+                dialogDeleteGroupVisible:false,
+                //编辑group弹窗，默认关闭
+                dialogGroupVisible:false,
                 // 选择segment组别弹窗
                 dialogSelectSegmentVisible: false,
-                // 列举segment成员弹窗
-                dialogSegmentMemberVisible: false,
+                // 管理segment弹窗
+                dialogSegmentManagementVisible: false,
+                dialogSegmentNameVisible: false,
+                dialogSegmentChildVisible: false,
                 totalWidth: 800,
                 // 每行网格个数
                 rowGridNum: 35,
@@ -341,7 +389,9 @@
                     segment {
                         segmentId1: {
                             name: 
+                            parentId: 
                             ledMember: [ledId1, ledId2, ...]
+                            segmentMember: [segmentId1, segmentId2]
                         }
                     }
                 */
@@ -349,11 +399,14 @@
                 led: {},
                 segment: {},
                 //存储group信息的数组
-                groupList:[],
-                groupContent:[],
-                availableElements:[],
-                newGroupName:'',
-                groupId:0,
+                groupList: [],
+                groupContent: [],
+                availableElements: [],
+                newGroupName: '',
+                groupId: 0,
+                // 用于绑定Segment管理中的表格数据
+                segmentList: [],
+                
                 // 在表单中对某一Button进行单独操作时更新该值
                 selectButtonId: '',
 
@@ -363,14 +416,14 @@
                 // 和segment的下拉菜单选择项做双向绑定
                 selectSegmentId: '',
 
-                /* 
-                    绑定选择led的segment group时下拉菜单的选项
-                    {
-                        segmentId: 
-                        segmentName:
-                    }
-                */
+                // 绑定输入的新增segment的名称
+                newSegmentName: '',
 
+                // 在SegmentManagement弹窗中操作的待删除Segment的id值
+                manageSegmentId: '',
+                // 所有可选的子组件选项
+                availableSegmentChild: [],
+                segmentChildMember: [],
 
                 /*
                     描述：与gridElementOverlap不同，这里存了特定一个网格中的所有组件的信息
@@ -691,6 +744,22 @@
                                 that.putLed(index, elementId, name, hwId, segmentId, 0,parentId);
                             }
                         });
+
+                        context.executeSql('SELECT MAX(bt.id) AS max_result FROM Button as bt', [], function (context, results) {
+                            if (results.rows.length > 0) {
+                                that.buttonCount = results.rows.item(0).max_result+1;
+                            }
+                        });
+                        context.executeSql('SELECT MAX(led.id) AS max_result FROM LED as led', [], function (context, results) {
+                            if (results.rows.length > 0) {
+                                that.ledCount = results.rows.item(0).max_result+1;
+                            }
+                        });
+                        context.executeSql('SELECT MAX(seg.id) AS max_result FROM Segment as seg', [], function (context, results) {
+                            if (results.rows.length > 0) {
+                                that.segmentCount = results.rows.item(0).max_result+1;
+                            }
+                        });
                 });
             },
             ondragover(event) {
@@ -699,32 +768,37 @@
             ondrop(event, index)  {
                 event.preventDefault()
                 let rangeIndex
+                let elementName
                 switch (this.dragElementType) {
                     // 新建一个button
                     case 1:
-                        this.putButton(index, buttonCount, '', '', 1,0)
-                        buttonCount++
+                        elementName = (this.boardType == 1 ? 'PS_Btn_' : 'OS_Btn_') + this.buttonCount
+                        this.putButton(index, this.buttonCount, elementName, '', 1,0)
+                        this.buttonCount++
                         break
                     // 新建一个led
                     case 2:
-                        this.putLed(index, ledCount, '', '', this.defaultSegmentId, 1,0)
-                        ledCount++
+                        elementName = (this.boardType == 1 ? 'PS_LED_' : 'OS_LED_') + this.ledCount
+                        this.putLed(index, this.ledCount, elementName, '', this.defaultSegmentId, 1,0)
+                        this.ledCount++
                         break
                     // 新建一个segment并生成7个相应的led
                     case 3:
-                        this.putSegment(segmentCount, "SegmentGroup" + segmentCount, 1,0);
+                        this.putSegment(this.segmentCount, "SegmentGroup" + this.segmentCount, 1,0);
                         rangeIndex = [index, index-1+this.rowGridNum, index+1+this.rowGridNum, index+2*this.rowGridNum,
                             index-1+3*this.rowGridNum, index+1+3*this.rowGridNum, index+4*this.rowGridNum]
                         for (let i = 0 ; i < rangeIndex.length ; ++i) {
-                            this.putLed(rangeIndex[i], ledCount, '', '', segmentCount, 1,0)
-                            ledCount++
+                            elementName = (this.boardType == 1 ? 'PS_LED_' : 'OS_LED_') + this.ledCount
+                            this.putLed(rangeIndex[i], this.ledCount, elementName, '', this.segmentCount, 1,0)
+                            this.ledCount++
                         }
-                        segmentCount++
+                        this.segmentCount++
                         break
                     default:
                         console.log('other situations')
                         break
                 }
+                this.dragElementType = 0
             },
             putButton(index, elementId, _name, _hwId, isCreate,_parentId) {
                 let templateId = this.templateId
@@ -762,7 +836,7 @@
 
                 if (isCreate == 1) {
                     db.transaction(function (context) {  
-                        context.executeSql('INSERT INTO Button (id,areaId,templateId,boardType,parentId) VALUES (?,?,?,?,?)',[elementId,index,templateId,boardType,0]);
+                        context.executeSql('INSERT INTO Button (id,name,hwId,areaId,templateId,boardType,parentId) VALUES (?,?,?,?,?,?,?)',[elementId,_name,_hwId,index,templateId,boardType,0]);
                     })
                 }
             },
@@ -805,9 +879,9 @@
                 let boardType = this.boardType
                 // 新建一个segment组别
                 this.segment[segmentId] = {
-                    id:segmentId,
                     name: _name,
                     ledMember: [],
+                    segmentMember: [],
                     parentId:_parentId
                 }
                 
@@ -817,6 +891,43 @@
                     });
                 }
                 
+            },
+            // 在segment管理弹窗中的删除功能
+            deleteSegment(id) {
+                // 将孩子元素(led以及segment)的segmentParentId都置为默认值
+                let childLed = []
+                let childSegment = []
+                for (let i = 0 ; i < this.segment[id].ledMember.length ; ++i) {
+                    let childLedId = this.segment[id].ledMember[i]
+                    this.led[childLedId].segmentId = this.defaultSegmentId
+                    childLed.push(childLedId)
+                }
+                
+                for (let i = 0 ; i < this.segment[id].segmentMember.length ; ++i) {
+                    let childSegmentId = this.segment[id].segmentMember[i]
+                    this.segment[childSegmentId].parentId = this.defaultSegmentId
+                    childSegment.push(childSegmentId)
+                }
+                // 删除segment和segmentList中的对应项
+                delete this.segment[id]
+                for (let i = 0 ; i < this.segmentList.length ; ++i) {
+                    if (this.segmentList[i].id == id) {
+                        this.segmentList.splice(i, 1)
+                        break
+                    }
+                }
+                let _this = this
+                // 同步数据库数据
+                db.transaction(function (context) {
+                    for (let i = 0 ; i < childLed.length ; ++i) {
+                        context.executeSql('UPDATE LED SET segmentId = ? WHERE id = ? AND boardType = ? AND templateId = ?',[_this.defaultSegmentId, childLed[i], _this.boardType, _this.templateId]);
+                    }
+                    for (let i = 0 ; i < childSegment.length ; ++i) {
+                        context.executeSql('UPDATE Segment SET parentId = ? WHERE id = ? AND boardType = ? AND templateId = ?',[_this.defaultSegmentId, childSegment[i], _this.boardType, _this.templateId]);
+                    }
+                    context.executeSql('DELETE FROM Segment Where id = ?', [id]);
+                });
+                this.dialogDeleteSegmentVisible=false
             },
             //新增group函数，先插入，然后重新读取group列表
             putGroup(){
@@ -848,11 +959,8 @@
             },
             submitGroup(){
                 let groupIdTmp = this.groupId;
-                console.log("目前可用元素"+this.availableElements);
-                console.log("目前group元素"+this.groupContent);
                 for(let item in this.availableElements){
                     let element = this.availableElements[item];
-                    console.log(element);
                     if(element.type==1){
                         db.transaction(function (context) { 
                             context.executeSql('UPDATE Button SET parentId=0 WHERE id =?',[element.id]);
@@ -865,7 +973,6 @@
                 }
                 for(let item in this.groupContent){
                     let element = this.groupContent[item];
-                    console.log(element);
                     if(element.split('n').length>1){
                         element = element.split('n')[1];
                         db.transaction(function (context) { 
@@ -886,7 +993,6 @@
             },
             //点击编辑group
             groupEdit(index, row) {
-                console.log(index, row);
                 this.groupId = row.id;
                 let groupIdTmp = row.id;
                 let templateId = this.templateId;
@@ -1042,6 +1148,123 @@
                 this.loadBoard()
                 this.dialogFormVisible = false
             },
+            // 打开管理Segment弹窗前进行的初始化工作
+            showSegmentManagementDialog() {
+                this.segmentList = []
+                for (let segmentId in this.segment) {
+                    this.segmentList.push({
+                        id: segmentId,
+                        name: this.segment[segmentId].name
+                    })
+                }
+                this.dialogSegmentManagementVisible = true
+            },
+            // 打开编辑Segment子组件弹窗并进行初始化工作
+            showSegmentChildDialog() {
+                this.dialogSegmentChildVisible = true
+                this.segmentChildMember = []
+                this.availableSegmentChild = []
+
+                // 判断两个segment之间是否存在父子关系
+                let _this = this
+                function isOfSegmentChild(childId, parentId) {
+                    let childSegment = _this.segment[childId]
+                    while (childSegment.parentId != 0) {
+                        if (childSegment.parentId == parentId) {
+                            return true;
+                        }
+                        childSegment = _this.segment[childSegment.parentId]
+                    }
+                    return false;
+                }
+
+                // 游离的led或是parent为选中segment的所有led
+                for (let i in this.led) {
+                    if (this.led[i].segmentId == 0 || this.led[i].segmentId==this.manageSegmentId) {
+                        this.availableSegmentChild.push(
+                            {
+                                key: 'led:'+i,
+                                label: this.led[i].name,
+                            }
+                        )
+                    }
+                }
+
+                // 游离的led或是parent为选中segment的所有segment, 并且要保证添加的segment不是选中的segment的parent以及其本身
+                for (let i in this.segment) {
+                    if ((this.segment[i].parentId == 0 || this.segment[i].parentId == this.manageSegmentId) 
+                        && isOfSegmentChild(this.manageSegmentId, i) == false && i != this.manageSegmentId) {
+                        this.availableSegmentChild.push(
+                            {
+                                key: 'segment:'+i,
+                                label: this.segment[i].name,
+                            }
+                        )
+                    }
+                }
+
+                // 初始化已成为子组件的led
+                for (let i = 0 ; i < this.segment[this.manageSegmentId].ledMember.length ; ++i) {
+                    this.segmentChildMember.push('led:'+this.segment[this.manageSegmentId].ledMember[i])
+                }
+
+                // 初始化已成为子组件的segment
+                for (let i = 0 ; i < this.segment[this.manageSegmentId].segmentMember.length ; ++i) {
+                    this.segmentChildMember.push('segment:'+this.segment[this.manageSegmentId].segmentMember[i])
+                }
+
+            },
+            // 根据manageSegmentId和segmentChildMember, 更改segment相关组件之间的父子关系
+            alterSegmentChild() {
+                let resetLed = []
+                let resetSegment = []
+                let childLed = []
+                let childSegment = []
+                let targetSegment = this.segment[this.manageSegmentId]
+
+                // 重置相关led和segment的父id
+                for (let i = 0 ; i < targetSegment.ledMember.length ; ++i) {
+                    this.led[targetSegment.ledMember[i]].segmentId = 0
+                    resetLed.push(targetSegment.ledMember[i])
+                }
+                for (let i = 0 ; i < targetSegment.segmentMember.length ; ++i) {
+                    this.segment[targetSegment.segmentMember[i]].parentId = 0
+                    resetSegment.push(targetSegment.segmentMember[i])
+                }
+                
+                targetSegment.ledMember = []
+                targetSegment.segmentMember = []
+
+                // 遍历segmentChildMember, 即待处理的所有子组件
+                for (let i = 0 ; i < this.segmentChildMember.length ; ++i) {
+                    let element = this.segmentChildMember[i].split(':')     // element: [elementName, elementId]
+                    if (element[0] == 'led') {
+                        this.led[element[1]].segmentId = this.manageSegmentId
+                        targetSegment.ledMember.push(element[1])
+                        childLed.push(element[1])
+                    } else {
+                        this.segment[element[1]].parentId = this.manageSegmentId
+                        targetSegment.segmentMember.push(element[1])
+                        childSegment.push(element[1])
+                    }
+                }
+
+                let _this = this
+                db.transaction(function (context) { 
+                    for (let i = 0 ; i < resetLed.length ; ++i) {
+                        context.executeSql('UPDATE LED SET segmentId = 0 WHERE id = ?',[resetLed[i]]);
+                    }
+                    for (let i = 0 ; i < resetSegment.length; ++i) {
+                        context.executeSql('UPDATE Segment SET parentId = 0 WHERE id = ?', [resetSegment[i]])
+                    }
+                    for (let i = 0 ; i < childLed.length; ++i) {
+                        context.executeSql('UPDATE LED SET segmentId = ? WHERE id = ?', [_this.manageSegmentId, childLed[i]])
+                    }
+                    for (let i = 0 ; i < childSegment.length; ++i) {
+                        context.executeSql('UPDATE Segment SET parentId = ? WHERE id = ?', [_this.manageSegmentId, childSegment[i]])
+                    }
+                })
+            },
             //点保存取名后确定
             submitTotalForm(){
                 let name = this.templateName;
@@ -1056,6 +1279,7 @@
                             context.executeSql('UPDATE LED SET templateId=? WHERE templateId =0',[templateId]);
                             context.executeSql('UPDATE Segment SET templateId=? WHERE templateId =0',[templateId]);
                             context.executeSql('UPDATE Groups SET templateId=? WHERE templateId =0',[templateId]);
+
                             location.reload();
                         }
                     });
@@ -1105,8 +1329,6 @@
                     this.workspaceDivClass.width = width - 10 + '%'
                 }
             },
-
-            
         }
     }
 </script>
@@ -1128,23 +1350,22 @@
     #button {
         width: 88px;
         height:88px;
-        /* border:1px solid #aaaaaa; */
+        /*border:1px solid #aaaaaa;*/
     }
 
     #LED {
         width: 38px;
         height:38px;
-        /* border:1px solid #aaaaaa; */
+        /*border:1px solid #aaaaaa;*/
     }
 
     #segment {
         margin: 10px;
         width: 88px;
         height:150px;
-        /* border:1px solid #aaaaaa; */
+        /*border:1px solid #aaaaaa;*/
     }
 
 </style>
-
 
 
