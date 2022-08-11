@@ -1352,6 +1352,8 @@
         width: 88px;
         height:88px;
         /*border:1px solid #aaaaaa;*/
+        background-color: #8CFE90;
+        margin: 10px;
     }
 
     #LED {
