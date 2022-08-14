@@ -19,50 +19,8 @@
             <div :style="radioClass">
                 <el-radio v-model="boardType" label="1" @change="loadBoard()">PS</el-radio>
                 <el-radio v-model="boardType" label="2" @change="loadBoard()">OS</el-radio>
-                <el-button @click="dialogGroupVisible = true">编辑group信息</el-button>
-                <!-- 编辑group信息 -->
-                <el-dialog title="group信息" :visible.sync="dialogGroupVisible" width="500">
-                    <el-table :data="groupList" height="300">
-                        <el-table-column property="id" label="id" width="150"></el-table-column>
-                        <el-table-column property="name" label="name" width="300"></el-table-column>
-                        <el-table-column label="操作" fixed="right">
-                            <template slot-scope="scope">
-                                <el-button size="medium" @click="groupEdit(scope.$index, scope.row)">编辑</el-button>
-                                <el-button size="medium" type="danger" @click="groupDelete(scope.$index, scope.row)">删除</el-button>
-                            </template>
-                        </el-table-column>
-                    </el-table>
-                    <el-button type="primary" icon="el-icon-circle-plus-outline" @click="dialogAddGroupVisible = true">新增group</el-button>
-                </el-dialog>
-                <!-- group删除提示 -->
-                <el-dialog
-                    title="提示"
-                    :visible.sync="dialogDeleteGroupVisible">
-                    <span>确认删除？</span>
-                    <span slot="footer" class="dialog-footer">
-                        <el-button type="primary" @click="groupDeleteConfirm(groupId)">确定</el-button>
-                        <el-button @click="dialogDeleteGroupVisible=false">取消</el-button>
-                    </span>
-                </el-dialog>
-                <!-- 新增group信息 -->
-                <el-dialog title="请输入group名称" :visible.sync="dialogAddGroupVisible">
-                    <el-form>
-                        <el-form-item label="name">
-                            <el-input v-model="newGroupName"></el-input>
-                        </el-form-item>
-                        <el-button type="primary" @click="putGroup()">确定</el-button>
-                        <el-button @click="dialogAddGroupVisible=false">取消</el-button>
-                    </el-form>
-                </el-dialog>
-                <!-- group双向穿梭框 -->
-                <el-dialog title="编辑group" :visible.sync="dialogEditGroupVisible">
-                    <el-form>
-                        <el-transfer v-model="groupContent" :data="availableElements" :titles="['可用元素', 'group']"></el-transfer>
-                        <el-button type="primary" @click="submitGroup()">确定</el-button>
-                        <el-button @click="dialogEditGroupVisible=false">取消</el-button>
-                    </el-form>
-                </el-dialog>
-                <el-button @click="showSegmentManagementDialog">管理Segment</el-button>
+                <el-button @click="loadGroup();">编辑group信息</el-button>   
+                <el-button @click="initSegmentManagement();">管理Segment</el-button>
             </div>
             <div id="MainArea" :style="workspaceDivClass">
                 
@@ -105,13 +63,23 @@
                                     <div v-if="targetGridElement.button[buttonId].toDelete==0">
                                         <el-row>
                                             <el-col :span="18">
-                                                <p>当前组件编号：{{buttonId}}</p>
+                                                <p>组件编号：{{buttonId}}</p>
                                             </el-col>
                                             <el-col :span="6">
                                                 <el-button type="warning" icon="el-icon-delete" @click="selectButtonId=buttonId; 
                                                      dialogDeleteButtonVisible=true;" size="medium">删除</el-button>
                                             </el-col>
                                         </el-row>
+                                        <el-col :span="18">
+                                                <p v-if="targetGridElement.button[buttonId].parentId!=0">
+                                                    Group分组: {{group[targetGridElement.button[buttonId].parentId].name}}
+                                                </p>
+                                                <p v-else>Group分组: none</p>
+                                            </el-col>
+                                            <el-col :span="6">
+                                                <el-button type="info" icon="el-icon-folder-opened" @click="selectButtonId=buttonId;
+                                                dialogSelectButtonGroupVisible=true" size="medium">更改</el-button>
+                                            </el-col>
                                         <el-form-item label="name">
                                             <el-input v-model="targetGridElement.button[buttonId].name"></el-input>
                                         </el-form-item>
@@ -130,7 +98,7 @@
                                     <div v-if="targetGridElement.led[ledId].toDelete==0">
                                         <el-row>
                                             <el-col :span="8">
-                                                <p>当前组件编号：{{ledId}}</p>
+                                                <p>组件编号：{{ledId}}</p>
                                             </el-col>
                                             <el-col :span="6" :offset="10">
                                                 <el-button type="warning" icon="el-icon-delete" @click="selectLedId=ledId; 
@@ -139,12 +107,24 @@
                                         </el-row>
                                         <el-row>
                                             <el-col :span="18">
-                                                <p v-if="segment[targetGridElement.led[ledId].segmentId]">SegmentGroup: {{segment[targetGridElement.led[ledId].segmentId].name}}</p>
-                                                <p v-else>SegmentGroup: none</p>
+                                                <p v-if="targetGridElement.led[ledId].parentId!=0">
+                                                    Group分组: {{group[targetGridElement.led[ledId].parentId].name}}
+                                                </p>
+                                                <p v-else>Group分组: none</p>
                                             </el-col>
                                             <el-col :span="6">
-                                                <el-button type="info" icon="el-icon-folder" @click="selectLedId=ledId; 
-                                                    dialogSelectSegmentVisible=true;" size="medium">更改分组</el-button>
+                                                <el-button type="info" icon="el-icon-folder-opened" @click="selectLedId=ledId;
+                                                dialogSelectLedGroupVisible=true" size="medium">更改</el-button>
+                                            </el-col>
+                                        </el-row>
+                                        <el-row>
+                                            <el-col :span="18">
+                                                <p v-if="segment[targetGridElement.led[ledId].segmentId]">Segment分组: {{segment[targetGridElement.led[ledId].segmentId].name}}</p>
+                                                <p v-else>Segment分组: none</p>
+                                            </el-col>
+                                            <el-col :span="6">
+                                                <el-button type="primary" icon="el-icon-collection" @click="selectLedId=ledId; 
+                                                    dialogSelectSegmentVisible=true;" size="medium">更改</el-button>
                                             </el-col>
                                         </el-row>
                                         <el-form-item label="name">
@@ -187,18 +167,6 @@
                     </span>
                 </el-dialog>
 
-                <!-- Segment删除提示 -->
-                <el-dialog
-                    title="提示"
-                    :visible.sync="dialogDeleteSegmentVisible">
-                    <span>确认删除编号为 {{manageSegmentId}} 的Segment组？</span><br/>
-                    <span>此处该操作不可逆</span>
-                    <span slot="footer" class="dialog-footer">
-                        <el-button type="primary" @click="deleteSegment(manageSegmentId)">确定</el-button>
-                        <el-button @click="dialogDeleteSegmentVisible=false">取消</el-button>
-                    </span>
-                </el-dialog>
-
                 <!-- 下拉菜单选择led所在segment分组 -->
                 <el-dialog title="选择segment分组" :visible.sync="dialogSelectSegmentVisible">
                     <el-select v-model="selectSegmentId" placeholder="请选择">
@@ -213,6 +181,43 @@
                     <el-button type="primary" @click="targetGridElement.led[selectLedId].segmentId=selectSegmentId;
                         targetGridElement.led[selectLedId].toAlterSegment=1; dialogSelectSegmentVisible=false;">确定</el-button>
                     <el-button @click="dialogSelectSegmentVisible=false">取消</el-button>
+                </el-dialog>
+
+
+
+
+
+
+                <!-- 下拉菜单选择button所在group分组 -->
+                <el-dialog title="选择group分组" :visible.sync="dialogSelectLedGroupVisible">
+                    <el-select v-model="selectGroupId" placeholder="请选择">
+                        <el-option value=0 label="none">none</el-option>
+                        <el-option
+                        v-for="(group, groupId) in group"
+                        :key="groupId"
+                        :label="group.name"
+                        :value="groupId">
+                        </el-option>
+                    </el-select>
+                    <el-button type="primary" @click="targetGridElement.led[selectLedId].parentId=selectGroupId;
+                        targetGridElement.led[selectLedId].toAlterGroup=1; dialogSelectLedGroupVisible=false;">确定</el-button>
+                    <el-button @click="dialogSelectLedGroupVisible=false">取消</el-button>
+                </el-dialog>
+
+                <!-- 下拉菜单选择led所在group分组 -->
+                <el-dialog title="选择group分组" :visible.sync="dialogSelectButtonGroupVisible">
+                    <el-select v-model="selectGroupId" placeholder="请选择">
+                        <el-option value=0 label="none">none</el-option>
+                        <el-option
+                        v-for="(group, groupId) in group"
+                        :key="groupId"
+                        :label="group.name"
+                        :value="groupId">
+                        </el-option>
+                    </el-select>
+                    <el-button type="primary" @click="targetGridElement.button[selectButtonId].parentId=selectGroupId;
+                        targetGridElement.button[selectButtonId].toAlterGroup=1; dialogSelectButtonGroupVisible=false;">确定</el-button>
+                    <el-button @click="dialogSelectButtonGroupVisible=false">取消</el-button>
                 </el-dialog>
                 
                 <!-- 保存按钮弹出窗口 -->
@@ -261,24 +266,36 @@
                         </el-table-column>
                         <el-table-column label="操作">
                             <template slot-scope="scope">
-                                <el-button size="mini" @click="manageSegmentId=scope.row.id;showSegmentChildDialog();">编辑</el-button>
+                                <el-button size="mini" @click="manageSegmentId=scope.row.id;editSegmentChild();">编辑</el-button>
                                 <el-button size="mini" type="danger" @click="dialogDeleteSegmentVisible=true; manageSegmentId=scope.row.id;">删除</el-button>
                             </template>
                         </el-table-column>
                     </el-table>
                    
-                        <el-button @click="newSegmentName=''; dialogSegmentNameVisible=true">新增</el-button>
-                    <el-button type="primary" @click="dialogSegmentManagementVisible=false">返回</el-button>
+                        <el-button type="primary" icon="el-icon-circle-plus-outline" @click="newSegmentName=''; dialogSegmentNameVisible=true">新增segment</el-button>
+                    <el-button type="text" @click="dialogSegmentManagementVisible=false">返回</el-button>
                 </el-dialog>
 
                 <!-- 为新建Segment取名 -->
                 <el-dialog title="填写名称" :visible.sync="dialogSegmentNameVisible">
                     <el-input v-model="newSegmentName" placeholder="请输入新增Segment组的名称"></el-input>
                     <div>
-                        <el-button size="mini" type="text" @click="dialogSegmentNameVisible=false;">取消</el-button>
                         <el-button type="primary" size="mini" @click="putSegment(segmentCount, newSegmentName, 1, defaultSegmentId);
                             dialogSegmentNameVisible=false; segmentList.push({id: segmentCount, name: newSegmentName}); segmentCount++;">确定</el-button>
+                        <el-button size="mini" type="text" @click="dialogSegmentNameVisible=false;">取消</el-button>
                     </div>
+                </el-dialog>
+
+                <!-- Segment删除提示 -->
+                <el-dialog
+                    title="提示"
+                    :visible.sync="dialogDeleteSegmentVisible">
+                    <span>确认删除编号为 {{manageSegmentId}} 的Segment组？</span><br/>
+                    <span>此处该操作不可逆</span>
+                    <span slot="footer" class="dialog-footer">
+                        <el-button type="primary" @click="deleteSegment(manageSegmentId)">确定</el-button>
+                        <el-button @click="dialogDeleteSegmentVisible=false">取消</el-button>
+                    </span>
                 </el-dialog>
 
                 <!-- 管理Segment子组件的穿梭框 -->
@@ -288,6 +305,51 @@
                     <el-button type="text" @click="dialogSegmentChildVisible=false">取消</el-button>
                 </el-dialog>
 
+                <!-- 管理group信息 -->
+                <el-dialog title="group信息" :visible.sync="dialogGroupVisible" width="500">
+                    <el-table :data="groupList" height="300">
+                        <el-table-column property="id" label="id" width="150"></el-table-column>
+                        <el-table-column property="name" label="name" width="300"></el-table-column>
+                        <el-table-column label="操作" fixed="right">
+                            <template slot-scope="scope">
+                                <el-button size="medium" @click="groupId=scope.row.id; groupEdit();">编辑</el-button>
+                                <el-button size="medium" type="danger" @click="groupId = scope.row.id; dialogDeleteGroupVisible = true;">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <el-button size="mini" type="primary" icon="el-icon-circle-plus-outline" @click="dialogAddGroupVisible = true">新增group</el-button>
+                    <el-button size="mini" type="text" @click="dialogGroupVisible=false">返回</el-button>
+                </el-dialog>
+
+                <!-- group删除提示 -->
+                <el-dialog
+                    title="提示"
+                    :visible.sync="dialogDeleteGroupVisible">
+                    <span>确认删除？</span>
+                    <span slot="footer" class="dialog-footer">
+                        <el-button type="primary" @click="groupDeleteConfirm">确定</el-button>
+                        <el-button @click="dialogDeleteGroupVisible=false">取消</el-button>
+                    </span>
+                </el-dialog>
+                <!-- 新增group信息 -->
+                <el-dialog title="请输入group名称" :visible.sync="dialogAddGroupVisible">
+                    <el-form>
+                        <el-form-item label="name">
+                            <el-input v-model="newGroupName"></el-input>
+                        </el-form-item>
+                        <el-button type="primary" @click="putGroup(groupCount, newGroupName, 1); dialogAddGroupVisible=false;
+                            groupList.push({id:groupCount, name:newGroupName}); groupCount++">确定</el-button>
+                        <el-button @click="dialogAddGroupVisible=false">取消</el-button>
+                    </el-form>
+                </el-dialog>
+                <!-- group双向穿梭框 -->
+                <el-dialog title="编辑group" :visible.sync="dialogEditGroupVisible">
+                    <el-form>
+                        <el-transfer v-model="groupContent" :data="availableElements" :titles="['可用元素', 'group']"></el-transfer>
+                        <el-button type="primary" @click="submitGroup()">确定</el-button>
+                        <el-button @click="dialogEditGroupVisible=false">取消</el-button>
+                    </el-form>
+                </el-dialog>
             </div>
         </el-col>
     </div>
@@ -306,6 +368,7 @@
                 buttonCount: 1,
                 ledCount: 1,
                 segmentCount: 1,
+                groupCount: 1,
                 loading: false,
                 fixPath: 1,
                 exportRelativePath:'',
@@ -333,6 +396,8 @@
                 dialogGroupVisible:false,
                 // 选择segment组别弹窗
                 dialogSelectSegmentVisible: false,
+                dialogSelectButtonGroupVisible: false,
+                dialogSelectLedGroupVisible: false,
                 // 管理segment弹窗
                 dialogSegmentManagementVisible: false,
                 dialogSegmentNameVisible: false,
@@ -381,11 +446,13 @@
                     buttonId: {
                         name: 
                         hwId: 
+                        parentId:
                     }
                     ledId: {
                         name: 
                         hwId: 
                         segmentId: 
+                        parentId: 
                     }
                     segment {
                         segmentId1: {
@@ -395,10 +462,18 @@
                             segmentMember: [segmentId1, segmentId2]
                         }
                     }
+                    group {
+                        groupId1: {
+                            name:
+                            buttonMember: []
+                            segmentMember: []
+                        }
+                    }
                 */
                 button: {},
                 led: {},
                 segment: {},
+                group:{},
                 //存储group信息的数组
                 groupList: [],
                 groupContent: [],
@@ -416,6 +491,7 @@
 
                 // 和segment的下拉菜单选择项做双向绑定
                 selectSegmentId: '',
+                selectGroupId: '',
 
                 // 绑定输入的新增segment的名称
                 newSegmentName: '',
@@ -434,6 +510,7 @@
                             buttonId1: {
                                 name:
                                 hwId:
+                                parentId:
                             },
                             ...
                         }
@@ -442,6 +519,7 @@
                                 name: 
                                 hwId: 
                                 segmentId:
+                                parentId:
                             }
                             ...
                         }
@@ -536,7 +614,8 @@
                                         _this.loading = false
                                         _this.$message({
                                             message: '导出成功',
-                                            type: 'success'
+                                            type: 'success',
+                                            duration: 1500
                                         });
                                     }
                             });
@@ -580,7 +659,8 @@
                                         _this.loading = false
                                         _this.$message({
                                             message: '导出成功',
-                                            type: 'success'
+                                            type: 'success',
+                                            duration: 1500
                                         });
                                     }
                             });
@@ -641,7 +721,8 @@
                                         _this.loading = false
                                         _this.$message({
                                             message: '导出成功',
-                                            type: 'success'
+                                            type: 'success',
+                                            duration: 1500
                                         });
                                     }
                             });
@@ -657,13 +738,8 @@
                 this.button = {};
                 this.led = {};
                 this.segment={}
+                this.group = {}
                 this.gridElementOverlap = {};
-                this.groupList = [];
-                this.loadGroup();
-                // this.targetGridElement = {
-                //     button: {},
-                //     led: {}
-                // };
                 // 获取中间工作区的页面宽度
                 this.totalWidth = document.getElementById("MainArea").offsetWidth;
                 // 计算一个网格的边长, 减去0.01防止四舍五入后总宽度不够，在浏览器允许的缩放范围内这个误差够了
@@ -703,6 +779,18 @@
                 let that = this;
                 //使用that来接受this的内容，此时可以通过that访问data中的数据
                 db.transaction(function (context) { 
+                        // 读取group数据
+                        context.executeSql('SELECT * FROM Groups WHERE templateId = ? and boardType = ?',[that.templateId,that.boardType],function(context,results){
+                            let len = results.rows.length;
+                            if(len>0)
+                            {
+                                for(let i = 0;i<len;i++){
+                                    let groupId = results.rows.item(i).id
+                                    let name = results.rows.item(i).name;
+                                    that.putGroup(groupId, name, 0);
+                                }
+                            }
+                        });
                         // 读取Button数据
                         context.executeSql('SELECT * FROM Button WHERE templateId = ? and boardType = ?',[that.templateId,that.boardType],function(context,results){
                             let len = results.rows.length;
@@ -759,6 +847,11 @@
                         context.executeSql('SELECT MAX(seg.id) AS max_result FROM Segment as seg', [], function (context, results) {
                             if (results.rows.length > 0) {
                                 that.segmentCount = results.rows.item(0).max_result+1;
+                            }
+                        });
+                        context.executeSql('SELECT MAX(grp.id) AS max_result FROM Groups as grp', [], function (context, results) {
+                            if (results.rows.length > 0) {
+                                that.groupCount = results.rows.item(0).max_result+1;
                             }
                         });
                 });
@@ -835,6 +928,10 @@
                     parentId:_parentId
                 }
 
+                if (_parentId != 0) {
+                    this.group[_parentId].buttonMember.push(elementId)
+                }
+
                 if (isCreate == 1) {
                     db.transaction(function (context) {  
                         context.executeSql('INSERT INTO Button (id,name,hwId,areaId,templateId,boardType,parentId) VALUES (?,?,?,?,?,?,?)',[elementId,_name,_hwId,index,templateId,boardType,0]);
@@ -868,6 +965,9 @@
                 if(_segmentId!=0){
                     this.segment[_segmentId].ledMember.push(elementId);
                 }
+                if (_parentId != 0) {
+                    this.group[_parentId].ledMember.push(elementId)
+                }
                 //将LED插入数据库
                 if (isCreate == 1) {
                     db.transaction(function (context) {  
@@ -893,264 +993,158 @@
                 }
                 
             },
-            // 在segment管理弹窗中的删除功能
-            deleteSegment(id) {
-                // 将孩子元素(led以及segment)的segmentParentId都置为默认值
-                let childLed = []
-                let childSegment = []
-                for (let i = 0 ; i < this.segment[id].ledMember.length ; ++i) {
-                    let childLedId = this.segment[id].ledMember[i]
-                    this.led[childLedId].segmentId = this.defaultSegmentId
-                    childLed.push(childLedId)
+            putGroup(groupId, _name, isCreate){
+                let templateId = this.templateId
+                let boardType = this.boardType
+
+                this.group[groupId] = {
+                    name: _name,
+                    buttonMember: [],
+                    ledMember: []
                 }
-                
-                for (let i = 0 ; i < this.segment[id].segmentMember.length ; ++i) {
-                    let childSegmentId = this.segment[id].segmentMember[i]
-                    this.segment[childSegmentId].parentId = this.defaultSegmentId
-                    childSegment.push(childSegmentId)
+
+                if (isCreate == 1) {
+                    db.transaction(function (context) { 
+                        context.executeSql('INSERT INTO Groups (id,name,templateId,boardType) VALUES (?,?,?,?)',[groupId,_name,templateId,boardType]);
+                    });
                 }
-                // 删除segment和segmentList中的对应项
-                delete this.segment[id]
-                for (let i = 0 ; i < this.segmentList.length ; ++i) {
-                    if (this.segmentList[i].id == id) {
-                        this.segmentList.splice(i, 1)
-                        break
-                    }
-                }
-                let _this = this
-                // 同步数据库数据
-                db.transaction(function (context) {
-                    for (let i = 0 ; i < childLed.length ; ++i) {
-                        context.executeSql('UPDATE LED SET segmentId = ? WHERE id = ? AND boardType = ? AND templateId = ?',[_this.defaultSegmentId, childLed[i], _this.boardType, _this.templateId]);
-                    }
-                    for (let i = 0 ; i < childSegment.length ; ++i) {
-                        context.executeSql('UPDATE Segment SET parentId = ? WHERE id = ? AND boardType = ? AND templateId = ?',[_this.defaultSegmentId, childSegment[i], _this.boardType, _this.templateId]);
-                    }
-                    context.executeSql('DELETE FROM Segment Where id = ?', [id]);
-                });
-                this.dialogDeleteSegmentVisible=false
-            },
-            //新增group函数，先插入，然后重新读取group列表
-            putGroup(){
-                let name = this.newGroupName;
-                let templateId = this.templateId;
-                let boardType = this.boardType;
-                db.transaction(function (context) { 
-                    context.executeSql('INSERT INTO Groups (name,templateId,boardType) VALUES (?,?,?)',[name,templateId,boardType]);
-                });
-                this.loadGroup();
                 this.dialogAddGroupVisible = false;
             },
-            //读取group列表
+            //读取group列表, 存入groupList
             loadGroup(){
-                let templateId = this.templateId;
-                let boardType = this.boardType;
-                this.groupList = [];
-                let that = this;
-                db.transaction(function (context) { 
-                    context.executeSql('SELECT * FROM Groups WHERE templateId = ? and boardType = ?',[templateId,boardType],function(context,results){
-                        let len = results.rows.length;
-                            for(let i = 0;i<len;i++){
-                                let _id = results.rows.item(i).id;
-                                let _name = results.rows.item(i).name;
-                                that.groupList.push({id:_id,name:_name});
-                            }
-                    });
-                });
+                this.groupList = []
+                for (let groupId in this.group) {
+                    this.groupList.push({
+                        id: groupId,
+                        name: this.group[groupId].name
+                    })
+                }
+                this.dialogGroupVisible = true
+            },
+            //点击编辑group
+            groupEdit() {
+                let groupIdTmp = this.groupId;
+                console.log(this.groupId)
+                this.availableElements =[];
+                this.groupContent = [];
+                for (let buttonId in this.button) {
+                    let name = this.button[buttonId].name
+                    let parentId = this.button[buttonId].parentId
+                    if (parentId == 0 || parentId == groupIdTmp) {
+                        this.availableElements.push({
+                            key: 'Button:'+buttonId,
+                            label: 'Button:'+name,
+                            type:1,
+                            id: buttonId
+                        })
+                    }
+                    if (parentId == groupIdTmp) {
+                        this.groupContent.push("Button:"+buttonId)
+                    }
+                }
+                for (let ledId in this.led) {
+                    let name = this.led[ledId].name
+                    let parentId = this.led[ledId].parentId
+                    if (parentId == 0 || parentId == groupIdTmp) {
+                        this.availableElements.push({
+                            key: "LED:"+ledId,
+                            label: "LED:"+name,
+                            type: 2,
+                            id: ledId
+                        })
+                    }
+                    if (parentId == groupIdTmp) {
+                        this.groupContent.push("LED:"+ledId)
+                    }
+                }
+                
+                this.dialogEditGroupVisible = true;
             },
             submitGroup(){
                 let groupIdTmp = this.groupId;
-                for(let item in this.availableElements){
-                    let element = this.availableElements[item];
-                    if(element.type==1){
-                        db.transaction(function (context) { 
-                            context.executeSql('UPDATE Button SET parentId=0 WHERE id =?',[element.id]);
-                        });
-                    }else{
-                        db.transaction(function (context) { 
-                            context.executeSql('UPDATE LED SET parentId=0 WHERE id =?',[element.id]);
-                        });
+                let buttonChild = []
+                let ledChild = []
+
+                // 重置所有原始子组件的parentId
+                for (let i in this.group[this.groupId].buttonMember) {
+                    this.button[this.group[this.groupId].buttonMember[i]].parentId = 0
+                }
+
+                for (let i in this.group[this.groupId].buttonMember) {
+                    this.led[this.group[this.groupId].ledMember[i]].parentId = 0
+                }
+
+                // 将编辑后的所有子组件的parentId置为当前groupId
+                for (let i in this.groupContent) {
+                    let element = this.groupContent[i]
+                    if (element.split(':')[0] == 'Button') {
+                        let elementId = element.split(':')[1];
+                        this.button[elementId].parentId = groupIdTmp
+                        buttonChild.push(elementId)
+                    } else {
+                        let elementId = element.split(':')[1];
+                        this.led[elementId].parentId = groupIdTmp
+                        ledChild.push(elementId)
                     }
                 }
-                for(let item in this.groupContent){
-                    let element = this.groupContent[item];
-                    if(element.split('n').length>1){
-                        element = element.split('n')[1];
-                        db.transaction(function (context) { 
-                            context.executeSql('UPDATE Button SET parentId=? WHERE id =?',[groupIdTmp,element]);
-                        });
-                    }else{
-                        element = element.split('D')[1];
-                        db.transaction(function (context) { 
-                            context.executeSql('UPDATE LED SET parentId=? WHERE id =?',[groupIdTmp,element]);
-                        });
+                db.transaction(function (context) {
+                    context.executeSql('UPDATE Button SET parentId = 0 WHERE parentId = ?', [groupIdTmp])
+                    context.executeSql('UPDATE LED SET parentId = 0 WHERE parentId = ?', [groupIdTmp])
+                    for (let i in buttonChild){
+                        context.executeSql('UPDATE Button SET parentId=? WHERE id =?',[groupIdTmp,buttonChild[i]]);
+                    }
+                    for (let i in ledChild) {
+                        context.executeSql('UPDATE LED SET parentId=? WHERE id =?',[groupIdTmp,ledChild[i]]);
                     }      
-                }
+                    
+                })
+                
                 this.$message({
                     message: '编辑成功！',
-                type: 'success'
-            });
-            this.dialogEditGroupVisible = false;
-            },
-            //点击编辑group
-            groupEdit(index, row) {
-                this.groupId = row.id;
-                let groupIdTmp = row.id;
-                let templateId = this.templateId;
-                let boardType = this.boardType;
-                this.availableElements =[];
-                this.groupContent = [];
-                let that = this;
-                db.transaction(function (context) { 
-                    context.executeSql('SELECT * FROM Button WHERE templateId = ? and boardType = ?',[templateId,boardType],function(context,results){
-                        let len = results.rows.length;
-                            for(let i = 0;i<len;i++){
-                                let _id = results.rows.item(i).id;
-                                let _name = results.rows.item(i).name;
-                                //LED的type为2，Button的type为1
-                                let _type = 1;
-                                let _parentId = results.rows.item(i).parentId;
-                                if(_parentId==0 || _parentId==groupIdTmp){
-                                    that.availableElements.push({key:"Button"+_id,label:"Button:"+_name,type:_type,id:_id});
-                                    if(_parentId == groupIdTmp){
-                                        that.groupContent.push("Button"+_id);
-                                    }
-                                } 
-                            }
-                    });
-                    context.executeSql('SELECT * FROM LED WHERE templateId = ? and boardType = ?',[templateId,boardType],function(context,results){
-                        let len = results.rows.length;
-                            for(let i = 0;i<len;i++){
-                                let _id = results.rows.item(i).id;
-                                let _name = results.rows.item(i).name;
-                                //LED的type为2，Button的type为1
-                                let _type = 2;
-                                let _parentId = results.rows.item(i).parentId;
-                                if(_parentId==0 || _parentId==groupIdTmp){
-                                    that.availableElements.push({key:"LED"+_id,label:"LED:"+_name,type:_type,id:_id});
-                                    if(_parentId == groupIdTmp){
-                                        that.groupContent.push("LED"+_id);
-                                    }
-                                } 
-                            }
-                    });
+                    type: 'success',
+                    duration: 1500
                 });
-                this.dialogEditGroupVisible = true;
-            },
-            //删除group
-            groupDelete(index, row){
-                this.groupId = row.id;
-                this.dialogDeleteGroupVisible = true;
+
+                this.dialogEditGroupVisible = false;
             },
             //点击删除group后确认
-            groupDeleteConfirm(groupId){
-                let groupIdTmp = groupId;
+            groupDeleteConfirm(){
+                let groupIdTmp = this.groupId;
+                let buttonMember = this.group[groupIdTmp].buttonMember
+                let ledMember = this.group[groupIdTmp].ledMember
+
+                // 重置所有子组件的parentId
+                for (let i in buttonMember.length) {
+                    this.button[buttonMember[i]].parentId = 0
+                }
+                for (let i in ledMember.length) {
+                    this.led[ledMember[i]].parentId = 0
+                }
+
+                // 删除group和groupList中的对应项
+                for (let i = 0 ; i < this.groupList.length ; ++i) {
+                    if (this.groupList[i].id == groupIdTmp) {
+                        this.groupList.splice(i, 1)
+                        break
+                    }
+                }
+                delete this.group[groupIdTmp]
+
                 db.transaction(function (context) { 
                     context.executeSql('DELETE FROM Groups WHERE id = ?',[groupIdTmp]);
                     context.executeSql('UPDATE Button SET parentId=0 WHERE parentId =?',[groupIdTmp]);
                     context.executeSql('UPDATE LED SET parentId=0 WHERE parentId =?',[groupIdTmp]);
                 });
                 this.dialogDeleteGroupVisible = false;
-                this.loadGroup();
                 this.$message({
                     message: '删除成功！',
-                type: 'success'
+                    type: 'success',
+                    duration: 1500
                 });
             },
-            // 判断是否显示表单，并初始化表单绑定的数据
-            ifGridDialogFormVisible(index) {
-                // targetGrid读取gridElementOverlap对象，获得了选中网格中的所有组件。
-                let targetGrid = this.gridElementOverlap[index]
-                if (targetGrid == null) {
-                    this.dialogFormVisible = false
-                } else {
-                    this.gridDialogIndex = index
-                    // 初始化
-                    this.targetGridElement = {
-                        button: {},
-                        led: {}
-                    }
-                    for (let i = 0 ; i < targetGrid['button'].length ; ++i) {
-                        let targetButtonId = targetGrid['button'][i]
-                        // 新增的对象默认是非响应式的，要用 this.$set() 其声明为响应式。
-                        // 详见 https://cn.vuejs.org/v2/guide/reactivity.html
-                        this.$set(this.targetGridElement['button'], targetButtonId, {})
-                        let targetButton = this.targetGridElement['button'][targetButtonId]
-                        this.$set(targetButton, 'name', this.button[targetButtonId].name)
-                        this.$set(targetButton, 'hwId', this.button[targetButtonId].hwId)
-                        this.$set(targetButton, 'toDelete', 0)
-                    }
-                    for (let i = 0 ; i < targetGrid['led'].length ; ++i) {
-                        let targetLedId = targetGrid['led'][i]
-                        // 与 button 同理
-                        this.$set(this.targetGridElement['led'], targetLedId, {})
-                        let targetLed = this.targetGridElement['led'][targetLedId]
-                        this.$set(targetLed, 'name', this.led[targetLedId].name)
-                        this.$set(targetLed, 'hwId', this.led[targetLedId].hwId)
-                        this.$set(targetLed, 'segmentId', this.led[targetLedId].segmentId)
-                        this.$set(targetLed, 'toDelete', 0)
-                        this.$set(targetLed, 'toAlterSegment', 0)
-                    }
-                    this.dialogFormVisible = true
-                }
-            }, 
-            ifDialogSaveVisible() {
-                if (this.templateId == 0) {
-                    this.dialogSaveVisible = true
-                } else {
-                    this.$message({
-                        message: '已保存',
-                        type: 'success',
-                        duration: 1500
-                    });
-                }
-            },
-            // 提交表单触发事件
-            submitGridDialogForm() {
-                // 处理表单数据
-                let targetButton = this.targetGridElement['button']
-                for (let buttonId in targetButton) {
-                    if (targetButton[buttonId].toDelete==1) {
-                        // 删除指定的button
-                        db.transaction(function (context) { 
-                            context.executeSql('DELETE FROM Button WHERE id =?',[buttonId]);
-                        });
-                        
-                    } else {
-                        // 修改button信息
-                        db.transaction(function (context) { 
-                            context.executeSql('UPDATE Button SET name=?,hwId=? WHERE id =?',[targetButton[buttonId].name,targetButton[buttonId].hwId,buttonId]);
-                        });
-                    }
-                }
 
-                let targetLed = this.targetGridElement['led']
-                for (let ledId in targetLed) {
-                    if (targetLed[ledId].toDelete==1) {
-                        // 删除指定的led
-                        db.transaction(function (context) { 
-                            context.executeSql('DELETE FROM LED WHERE id =?',[ledId]);
-                        });
-                    } else {
-                        // 修改led信息
-                        
-                        if (this.led[ledId].toAlterSegment == 1) {
-                            // 更改led分组
-                            db.transaction(function (context) { 
-                                context.executeSql('UPDATE LED SET segmentId=? WHERE id=?',[targetLed[ledId].segmentId, ledId]);
-                            })
-                        }
-
-                        db.transaction(function (context) {
-                            context.executeSql('UPDATE LED SET name=?,hwId=?,segmentId=? WHERE id =?',[targetLed[ledId].name,targetLed[ledId].hwId,targetLed[ledId].segmentId,ledId]);
-                        });
-                    }
-                }
-                this.loadBoard()
-                this.dialogFormVisible = false
-            },
             // 打开管理Segment弹窗前进行的初始化工作
-            showSegmentManagementDialog() {
+            initSegmentManagement() {
                 this.segmentList = []
                 for (let segmentId in this.segment) {
                     this.segmentList.push({
@@ -1161,8 +1155,7 @@
                 this.dialogSegmentManagementVisible = true
             },
             // 打开编辑Segment子组件弹窗并进行初始化工作
-            showSegmentChildDialog() {
-                this.dialogSegmentChildVisible = true
+            editSegmentChild() {
                 this.segmentChildMember = []
                 this.availableSegmentChild = []
 
@@ -1189,6 +1182,10 @@
                             }
                         )
                     }
+                    // 初始化已成为子组件的led
+                    if (this.led[i].segmentId == this.manageSegmentId) {
+                        this.segmentChildMember.push('led:'+i)
+                    }
                 }
 
                 // 游离的led或是parent为选中segment的所有segment, 并且要保证添加的segment不是选中的segment的parent以及其本身
@@ -1202,35 +1199,22 @@
                             }
                         )
                     }
+                    if (this.segment[i].parentId == this.manageSegmentId) {
+                        this.segmentChildMember.push('segment:'+i)
+                    }
                 }
-
-                // 初始化已成为子组件的led
-                for (let i = 0 ; i < this.segment[this.manageSegmentId].ledMember.length ; ++i) {
-                    this.segmentChildMember.push('led:'+this.segment[this.manageSegmentId].ledMember[i])
-                }
-
-                // 初始化已成为子组件的segment
-                for (let i = 0 ; i < this.segment[this.manageSegmentId].segmentMember.length ; ++i) {
-                    this.segmentChildMember.push('segment:'+this.segment[this.manageSegmentId].segmentMember[i])
-                }
-
+                this.dialogSegmentChildVisible = true
             },
             // 根据manageSegmentId和segmentChildMember, 更改segment相关组件之间的父子关系
             alterSegmentChild() {
-                let resetLed = []
-                let resetSegment = []
-                let childLed = []
-                let childSegment = []
                 let targetSegment = this.segment[this.manageSegmentId]
 
                 // 重置相关led和segment的父id
                 for (let i = 0 ; i < targetSegment.ledMember.length ; ++i) {
                     this.led[targetSegment.ledMember[i]].segmentId = 0
-                    resetLed.push(targetSegment.ledMember[i])
                 }
                 for (let i = 0 ; i < targetSegment.segmentMember.length ; ++i) {
                     this.segment[targetSegment.segmentMember[i]].parentId = 0
-                    resetSegment.push(targetSegment.segmentMember[i])
                 }
                 
                 targetSegment.ledMember = []
@@ -1242,22 +1226,18 @@
                     if (element[0] == 'led') {
                         this.led[element[1]].segmentId = this.manageSegmentId
                         targetSegment.ledMember.push(element[1])
-                        childLed.push(element[1])
                     } else {
                         this.segment[element[1]].parentId = this.manageSegmentId
                         targetSegment.segmentMember.push(element[1])
-                        childSegment.push(element[1])
                     }
                 }
 
+                let childLed = targetSegment.ledMember
+                let childSegment = targetSegment.segmentMember
                 let _this = this
                 db.transaction(function (context) { 
-                    for (let i = 0 ; i < resetLed.length ; ++i) {
-                        context.executeSql('UPDATE LED SET segmentId = 0 WHERE id = ?',[resetLed[i]]);
-                    }
-                    for (let i = 0 ; i < resetSegment.length; ++i) {
-                        context.executeSql('UPDATE Segment SET parentId = 0 WHERE id = ?', [resetSegment[i]])
-                    }
+                    context.executeSql('UPDATE LED SET segmentId = 0 WHERE segmentId = ?',[_this.manageSegmentId]);
+                    context.executeSql('UPDATE Segment SET parentId = 0 WHERE parentId = ?', [_this.manageSegmentId])
                     for (let i = 0 ; i < childLed.length; ++i) {
                         context.executeSql('UPDATE LED SET segmentId = ? WHERE id = ?', [_this.manageSegmentId, childLed[i]])
                     }
@@ -1265,6 +1245,148 @@
                         context.executeSql('UPDATE Segment SET parentId = ? WHERE id = ?', [_this.manageSegmentId, childSegment[i]])
                     }
                 })
+
+                this.$message({
+                    message: '编辑成功！',
+                    type: 'success',
+                    duration: 1500
+                });
+            },
+            // 在segment管理弹窗中的删除功能
+            deleteSegment(id) {
+                // 将孩子元素(led以及segment)的segmentParentId都置为默认值
+                for (let i = 0 ; i < this.segment[id].ledMember.length ; ++i) {
+                    let childLedId = this.segment[id].ledMember[i]
+                    this.led[childLedId].segmentId = this.defaultSegmentId
+                }
+                
+                for (let i = 0 ; i < this.segment[id].segmentMember.length ; ++i) {
+                    let childSegmentId = this.segment[id].segmentMember[i]
+                    this.segment[childSegmentId].parentId = this.defaultSegmentId
+                }
+                // 删除segment和segmentList中的对应项
+                delete this.segment[id]
+                for (let i = 0 ; i < this.segmentList.length ; ++i) {
+                    if (this.segmentList[i].id == id) {
+                        this.segmentList.splice(i, 1)
+                        break
+                    }
+                }
+                let _this = this
+                // 同步数据库数据
+                db.transaction(function (context) {
+                    context.executeSql('UPDATE LED SET segmentId = ? WHERE segmentId = ?', [_this.defaultSegmentId, _this.manageSegmentId])
+                    context.executeSql('UPDATE Segment SET parentId = ? WHERE parentId = ?', [_this.defaultSegmentId, _this.manageSegmentId])
+                    context.executeSql('DELETE FROM Segment Where id = ?', [id]);
+                });
+                
+                this.dialogDeleteSegmentVisible=false
+                this.$message({
+                    message: '删除成功！',
+                    type: 'success',
+                    duration: 1500
+                });
+            },
+            // 判断是否显示表单，并初始化表单绑定的数据
+            ifGridDialogFormVisible(index) {
+                // targetGrid读取gridElementOverlap对象，获得了选中网格中的所有组件。
+                let targetGrid = this.gridElementOverlap[index]
+                if (targetGrid == null) {
+                    this.dialogFormVisible = false
+                } else {
+                    this.gridDialogIndex = index
+                    // 初始化
+                    this.targetGridElement = {
+                        button: {},
+                        led: {}
+                    }
+                    for (let i = 0 ; i < targetGrid['button'].length ; ++i) {
+                        let targetButtonId = targetGrid['button'][i]
+                        // 新增的对象默认是非响应式的，要用 this.$set() 其声明为响应式。
+                        // 详见 https://cn.vuejs.org/v2/guide/reactivity.html
+                        this.$set(this.targetGridElement['button'], targetButtonId, {})
+                        let targetButton = this.targetGridElement['button'][targetButtonId]
+                        this.$set(targetButton, 'name', this.button[targetButtonId].name)
+                        this.$set(targetButton, 'hwId', this.button[targetButtonId].hwId)
+                        this.$set(targetButton, 'parentId', this.button[targetButtonId].parentId)
+                        this.$set(targetButton, 'toDelete', 0)
+                        this.$set(targetButton, 'toAlterGroup', 0)
+                    }
+                    for (let i = 0 ; i < targetGrid['led'].length ; ++i) {
+                        let targetLedId = targetGrid['led'][i]
+                        // 与 button 同理
+                        this.$set(this.targetGridElement['led'], targetLedId, {})
+                        let targetLed = this.targetGridElement['led'][targetLedId]
+                        this.$set(targetLed, 'name', this.led[targetLedId].name)
+                        this.$set(targetLed, 'hwId', this.led[targetLedId].hwId)
+                        this.$set(targetLed, 'segmentId', this.led[targetLedId].segmentId)
+                        this.$set(targetLed, 'parentId', this.led[targetLedId].parentId)
+                        this.$set(targetLed, 'toDelete', 0)
+                        this.$set(targetLed, 'toAlterSegment', 0)
+                        this.$set(targetLed, 'toAlterGroup', 0)
+                    }
+                    this.dialogFormVisible = true
+                }
+            }, 
+            ifDialogSaveVisible() {
+                if (this.templateId == 0) {
+                    this.dialogSaveVisible = true
+                } else {
+                    this.$message({
+                        message: '已保存',
+                        type: 'success',
+                        duration: 1500
+                    });
+                }
+            },
+            // 提交表单触发事件
+            submitGridDialogForm() {
+                // 处理表单数据
+                let targetButton = this.targetGridElement['button']
+                db.transaction(function (context) { 
+                    for (let buttonId in targetButton) {
+                        if (targetButton[buttonId].toDelete==1) {
+                            // 删除指定的button
+                            context.executeSql('DELETE FROM Button WHERE id =?',[buttonId]);
+                            
+                        } else {
+                            if (targetButton[buttonId].toAlterGroup == 1) {
+                                context.executeSql('UPDATE Button SET parentId=? WHERE id=?',[targetButton[buttonId].parentId, buttonId]);
+                            }
+                        }
+                        context.executeSql('UPDATE Button SET name=?,hwId=? WHERE id =?',[targetButton[buttonId].name,targetButton[buttonId].hwId,buttonId]);
+                    }
+                })
+
+                let targetLed = this.targetGridElement['led']
+                db.transaction(function (context) {
+                    for (let ledId in targetLed) {
+                        if (targetLed[ledId].toDelete==1) {
+                            // 删除指定的led
+                            context.executeSql('DELETE FROM LED WHERE id =?',[ledId]);
+                        } else {
+                            // 修改led信息
+                            
+                            if (targetLed[ledId].toAlterSegment == 1) {
+                                // 更改led分组
+                                context.executeSql('UPDATE LED SET segmentId=? WHERE id=?',[targetLed[ledId].segmentId, ledId]);
+                            }
+
+                            if (targetLed[ledId].toAlterGroup == 1) {
+                                context.executeSql('UPDATE LED SET parentId=? WHERE id=?',[targetLed[ledId].parentId, ledId]);
+                            }
+
+                            context.executeSql('UPDATE LED SET name=?,hwId=?,segmentId=? WHERE id =?',[targetLed[ledId].name,targetLed[ledId].hwId,targetLed[ledId].segmentId,ledId]);
+                        }
+                    }
+                })
+                this.$message({
+                    message: '编辑成功！',
+                    type: 'success',
+                    duration: 1500
+                });
+                this.loadBoard()
+                this.dialogFormVisible = false
             },
             //点保存取名后确定
             submitTotalForm(){
@@ -1370,5 +1492,3 @@
     }
 
 </style>
-
-
