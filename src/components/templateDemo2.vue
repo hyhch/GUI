@@ -575,8 +575,10 @@
                 } else {
                     1 + 1
                 }
+                
+                
                 let _this = this
-                db.transaction(function (context) {
+                db.transaction(function (context) {        
                     context.executeSql('SELECT name, hwId, boardType FROM Button WHERE templateId = ?', 
                         [_this.templateId], function (context, results) {
                             for (let i = 0 ; i < results.rows.length ; ++i) {
@@ -613,7 +615,7 @@
                                     if (response.data == "SAVE SUCCESSFULLY") {
                                         _this.loading = false
                                         _this.$message({
-                                            message: 'Success!',
+                                            message: 'Success',
                                             type: 'success',
                                             duration: 1500
                                         });
@@ -666,36 +668,49 @@
                             });
                     });
 
-                    // 提取PS以及OS板的led与segment的join数据，且按segmentId排序
-                    context.executeSql('SELECT LED.name AS ledMemberName, Segment.name AS segmentName, Segment.id AS segmentId, LED.boardType AS boardType FROM LED \
-                        INNER JOIN Segment ON LED.segmentId = Segment.id WHERE LED.templateId = ? ORDER BY segmentId ASC', [_this.templateId], function(context, results) {
+                    // 提取PS以及OS板的segment所包含的所有子组件，且按segmentId排序
+                    context.executeSql('SELECT * FROM (SELECT LED.name AS memberName, Segment.id AS segParentId, Segment.name as segParentName, Segment.parentId AS upperId, \
+                    LED.boardType AS boardType, \'led\' AS elType FROM LED INNER JOIN Segment ON LED.segmentId = Segment.id WHERE LED.templateId = ? UNION SELECT SegChild.name AS memberName,\
+                     SegParent.id AS segParentId, SegParent.name AS segParentName, SegParent.parentId AS upperId, SegChild.boardType AS boardType, \'segment\' AS elType \
+                     FROM Segment AS SegChild INNER JOIN Segment AS SegParent ON SegChild.parentId = SegParent.id WHERE SegChild.templateId = ?)\
+                      ORDER BY segParentId ASC', [_this.templateId, _this.templateId], function(context, results) {
+
                             let lastSegmentId = ''
                             for (let i = 0 ; i < results.rows.length ; ++i) {
-                                if (results.rows[i].segmentName == 'default') {
-                                    continue
-                                } else {
-                                    // 当一条数据的segmentId改变时，新增一个psSegmentList项
-                                    // 由于results.rows所获取的数据已按segmentId排序，所以可以保证新增psSegmentList项时不重复
-                                    if (results.rows[i].boardType == 1) {
-                                        if (results.rows[i].segmentId != lastSegmentId) {
-                                            psSegmentList.push({
-                                                name: results.rows[i].segmentName,
-                                                ledMemberName: [results.rows[i].ledMemberName]
-                                            })
-                                            lastSegmentId = results.rows[i].segmentId
-                                        } else {
-                                            psSegmentList[psSegmentList.length - 1].ledMemberName.push(results.rows[i].ledMemberName)
-                                        }
+                                // 当一条数据的segmentId改变时，新增一个psSegmentList项
+                                // 由于results.rows所获取的数据已按segmentId排序，所以可以保证新增psSegmentList项时不重复
+                                if (results.rows[i].boardType == 1) {
+                                    if (results.rows[i].segParentId != lastSegmentId) {
+                                        psSegmentList.push({
+                                            name: results.rows[i].segParentName,
+                                            member: [{
+                                                elementName: results.rows[i].memberName,
+                                                elementType: results.rows[i].elType,
+                                            }],
+                                            upperId: results.rows[i].upperId
+                                        })
+                                        lastSegmentId = results.rows[i].segParentId
                                     } else {
-                                        if (results.rows[i].segmentId != lastSegmentId) {
-                                            osSegmentList.push({
-                                                name: results.rows[i].segmentName,
-                                                ledMemberName: [results.rows[i].ledMemberName]
+                                        psSegmentList[psSegmentList.length - 1].member.push({
+                                                elementName: results.rows[i].memberName,
+                                                elementType: results.rows[i].elType,
                                             })
-                                            lastSegmentId = results.rows[i].segmentId
-                                        } else {
-                                            osSegmentList[osSegmentList.length - 1].ledMemberName.push(results.rows[i].ledMemberName)
-                                        }
+                                    }
+                                } else {
+                                    if (results.rows[i].segParentId != lastSegmentId) {
+                                        osSegmentList.push({
+                                            name: results.rows[i].segParentName,
+                                            member: [{
+                                                elementName: results.rows[i].memberName,
+                                                elementType: results.rows[i].elType,
+                                            }]
+                                        })
+                                        lastSegmentId = results.rows[i].segParentId
+                                    } else {
+                                        osSegmentList[psSegmentList.length - 1].member.push({
+                                                elementName: results.rows[i].memberName,
+                                                elementType: results.rows[i].elType
+                                        })
                                     }
                                 }
                             }
@@ -727,11 +742,7 @@
                                     }
                             });
                     })
-
-                    
-                    
-                });
-
+                })
                
             },
             pageInit(){
