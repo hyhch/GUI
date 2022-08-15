@@ -1,7 +1,7 @@
 <template>
     <div>
         <el-col :span="2" style="background-color:#F2F6FC;height:800px;text-align: center;">
-            <div style="text-align:center;margin-bottom: 20px;font-size: 18px;">elements</div>
+            <div style="text-align:center;margin-bottom: 20px;font-size: 20px;">Elements</div>
             <div draggable="true" id="button" @dragstart="dragElementType=1" @dragend="dragElementType=0">
             </div>
             <p style="margin-bottom:20px">Button</p>
@@ -19,8 +19,8 @@
             <div :style="radioClass">
                 <el-radio v-model="boardType" label="1" @change="loadBoard()">PS</el-radio>
                 <el-radio v-model="boardType" label="2" @change="loadBoard()">OS</el-radio>
-                <el-button @click="loadGroup();">编辑group信息</el-button>   
-                <el-button @click="initSegmentManagement();">管理Segment</el-button>
+                <el-button @click="loadGroup();">Edit Mapping Info</el-button>   
+                <el-button @click="initSegmentManagement();">Edit Segment Info</el-button>
             </div>
             <div id="MainArea" :style="workspaceDivClass">
                 
@@ -42,11 +42,11 @@
                 ></div>
 
                 <br />
-                <el-button type="primary" @click="ifDialogSaveVisible"> 保存 </el-button>
-                <el-button type="primary" @click="dialogExportVisible=true; exportRelativePath=''"> 导出 </el-button>
+                <el-button type="primary" @click="ifDialogSaveVisible"> Save </el-button>
+                <el-button type="primary" @click="dialogExportVisible=true; exportRelativePath=''"> Export </el-button>
 
                 <!-- 更改某一网格所有组件属性的表单 -->
-                <el-dialog title="设置属性" :visible.sync="dialogFormVisible">
+                <el-dialog title="Set Attribute" :visible.sync="dialogFormVisible">
                     <!-- 这里需要接受参数gridDialogIndex(点击的网格的index) -->
                     <el-form :inline="true">
 
@@ -63,22 +63,22 @@
                                     <div v-if="targetGridElement.button[buttonId].toDelete==0">
                                         <el-row>
                                             <el-col :span="18">
-                                                <p>组件编号：{{buttonId}}</p>
+                                                <p>Id:{{buttonId}}</p>
                                             </el-col>
                                             <el-col :span="6">
                                                 <el-button type="warning" icon="el-icon-delete" @click="selectButtonId=buttonId; 
-                                                     dialogDeleteButtonVisible=true;" size="medium">删除</el-button>
+                                                     dialogDeleteButtonVisible=true;" size="medium">Delete</el-button>
                                             </el-col>
                                         </el-row>
                                         <el-col :span="18">
                                                 <p v-if="targetGridElement.button[buttonId].parentId!=0">
-                                                    Group分组: {{group[targetGridElement.button[buttonId].parentId].name}}
+                                                    Mapping: {{group[targetGridElement.button[buttonId].parentId].name}}
                                                 </p>
-                                                <p v-else>Group分组: none</p>
+                                                <p v-else>Mapping: none</p>
                                             </el-col>
                                             <el-col :span="6">
                                                 <el-button type="info" icon="el-icon-folder-opened" @click="selectButtonId=buttonId;
-                                                dialogSelectButtonGroupVisible=true" size="medium">更改</el-button>
+                                                dialogSelectButtonGroupVisible=true" size="medium">Change</el-button>
                                             </el-col>
                                         <el-form-item label="name">
                                             <el-input v-model="targetGridElement.button[buttonId].name"></el-input>
@@ -98,33 +98,33 @@
                                     <div v-if="targetGridElement.led[ledId].toDelete==0">
                                         <el-row>
                                             <el-col :span="8">
-                                                <p>组件编号：{{ledId}}</p>
+                                                <p>Id:{{ledId}}</p>
                                             </el-col>
                                             <el-col :span="6" :offset="10">
                                                 <el-button type="warning" icon="el-icon-delete" @click="selectLedId=ledId; 
-                                                dialogDeleteLedVisible=true;" size="medium">删除</el-button>
+                                                dialogDeleteLedVisible=true;" size="medium">Delete</el-button>
                                             </el-col>
                                         </el-row>
                                         <el-row>
                                             <el-col :span="18">
                                                 <p v-if="targetGridElement.led[ledId].parentId!=0">
-                                                    Group分组: {{group[targetGridElement.led[ledId].parentId].name}}
+                                                    Mapping: {{group[targetGridElement.led[ledId].parentId].name}}
                                                 </p>
-                                                <p v-else>Group分组: none</p>
+                                                <p v-else>Mapping: none</p>
                                             </el-col>
                                             <el-col :span="6">
                                                 <el-button type="info" icon="el-icon-folder-opened" @click="selectLedId=ledId;
-                                                dialogSelectLedGroupVisible=true" size="medium">更改</el-button>
+                                                dialogSelectLedGroupVisible=true" size="medium">Change</el-button>
                                             </el-col>
                                         </el-row>
                                         <el-row>
                                             <el-col :span="18">
-                                                <p v-if="segment[targetGridElement.led[ledId].segmentId]">Segment分组: {{segment[targetGridElement.led[ledId].segmentId].name}}</p>
-                                                <p v-else>Segment分组: none</p>
+                                                <p v-if="segment[targetGridElement.led[ledId].segmentId]">Segment: {{segment[targetGridElement.led[ledId].segmentId].name}}</p>
+                                                <p v-else>Segment: none</p>
                                             </el-col>
                                             <el-col :span="6">
                                                 <el-button type="primary" icon="el-icon-collection" @click="selectLedId=ledId; 
-                                                    dialogSelectSegmentVisible=true;" size="medium">更改</el-button>
+                                                    dialogSelectSegmentVisible=true;" size="medium">Change</el-button>
                                             </el-col>
                                         </el-row>
                                         <el-form-item label="name">
@@ -139,37 +139,37 @@
                             </div>
                         </div>
                         
-                    <el-button type="primary" @click="submitGridDialogForm">确定</el-button>
-                    <el-button @click="dialogFormVisible=false">取消</el-button>
+                    <el-button type="primary" @click="submitGridDialogForm">Confirm</el-button>
+                    <el-button @click="dialogFormVisible=false">Cancel</el-button>
                         
                     </el-form>
                 </el-dialog>
 
                 <!-- button删除提示 -->
                 <el-dialog
-                    title="提示"
+                    title="Tips"
                     :visible.sync="dialogDeleteButtonVisible">
-                    <span>确认删除？</span>
+                    <span>Are you sure?</span>
                     <span slot="footer" class="dialog-footer">
-                        <el-button type="primary" @click="targetGridElement.button[selectButtonId].toDelete=1; dialogDeleteButtonVisible=false;">确定</el-button>
-                        <el-button @click="dialogDeleteButtonVisible=false">取消</el-button>
+                        <el-button type="primary" @click="targetGridElement.button[selectButtonId].toDelete=1; dialogDeleteButtonVisible=false;">Confirm</el-button>
+                        <el-button @click="dialogDeleteButtonVisible=false">Cancel</el-button>
                     </span>
                 </el-dialog>
 
                 <!-- led删除提示 -->
                 <el-dialog
-                    title="提示"
+                    title="Tips"
                     :visible.sync="dialogDeleteLedVisible">
-                    <span>确认删除？</span>
+                    <span>Are you sure?</span>
                     <span slot="footer" class="dialog-footer">
-                        <el-button type="primary" @click="targetGridElement.led[selectLedId].toDelete=1; dialogDeleteLedVisible=false;">确定</el-button>
-                        <el-button @click="dialogDeleteLedVisible=false">取消</el-button>
+                        <el-button type="primary" @click="targetGridElement.led[selectLedId].toDelete=1; dialogDeleteLedVisible=false;">Confirm</el-button>
+                        <el-button @click="dialogDeleteLedVisible=false">Cancel</el-button>
                     </span>
                 </el-dialog>
 
                 <!-- 下拉菜单选择led所在segment分组 -->
-                <el-dialog title="选择segment分组" :visible.sync="dialogSelectSegmentVisible">
-                    <el-select v-model="selectSegmentId" placeholder="请选择">
+                <el-dialog title="Select Segment" :visible.sync="dialogSelectSegmentVisible">
+                    <el-select v-model="selectSegmentId" placeholder="Please Select">
                         <el-option value=0 label="none">none</el-option>
                         <el-option
                         v-for="(seg, segId) in segment"
@@ -179,8 +179,8 @@
                         </el-option>
                     </el-select>
                     <el-button type="primary" @click="targetGridElement.led[selectLedId].segmentId=selectSegmentId;
-                        targetGridElement.led[selectLedId].toAlterSegment=1; dialogSelectSegmentVisible=false;">确定</el-button>
-                    <el-button @click="dialogSelectSegmentVisible=false">取消</el-button>
+                        targetGridElement.led[selectLedId].toAlterSegment=1; dialogSelectSegmentVisible=false;">Confirm</el-button>
+                    <el-button @click="dialogSelectSegmentVisible=false">Cancel</el-button>
                 </el-dialog>
 
 
@@ -189,8 +189,8 @@
 
 
                 <!-- 下拉菜单选择button所在group分组 -->
-                <el-dialog title="选择group分组" :visible.sync="dialogSelectLedGroupVisible">
-                    <el-select v-model="selectGroupId" placeholder="请选择">
+                <el-dialog title="Select Mapping" :visible.sync="dialogSelectLedGroupVisible">
+                    <el-select v-model="selectGroupId" placeholder="Please Select">
                         <el-option value=0 label="none">none</el-option>
                         <el-option
                         v-for="(group, groupId) in group"
@@ -200,13 +200,13 @@
                         </el-option>
                     </el-select>
                     <el-button type="primary" @click="targetGridElement.led[selectLedId].parentId=selectGroupId;
-                        targetGridElement.led[selectLedId].toAlterGroup=1; dialogSelectLedGroupVisible=false;">确定</el-button>
-                    <el-button @click="dialogSelectLedGroupVisible=false">取消</el-button>
+                        targetGridElement.led[selectLedId].toAlterGroup=1; dialogSelectLedGroupVisible=false;">Confirm</el-button>
+                    <el-button @click="dialogSelectLedGroupVisible=false">Cancel</el-button>
                 </el-dialog>
 
                 <!-- 下拉菜单选择led所在group分组 -->
-                <el-dialog title="选择group分组" :visible.sync="dialogSelectButtonGroupVisible">
-                    <el-select v-model="selectGroupId" placeholder="请选择">
+                <el-dialog title="Select Mapping" :visible.sync="dialogSelectButtonGroupVisible">
+                    <el-select v-model="selectGroupId" placeholder="Please Select">
                         <el-option value=0 label="none">none</el-option>
                         <el-option
                         v-for="(group, groupId) in group"
@@ -216,42 +216,42 @@
                         </el-option>
                     </el-select>
                     <el-button type="primary" @click="targetGridElement.button[selectButtonId].parentId=selectGroupId;
-                        targetGridElement.button[selectButtonId].toAlterGroup=1; dialogSelectButtonGroupVisible=false;">确定</el-button>
-                    <el-button @click="dialogSelectButtonGroupVisible=false">取消</el-button>
+                        targetGridElement.button[selectButtonId].toAlterGroup=1; dialogSelectButtonGroupVisible=false;">Confirm</el-button>
+                    <el-button @click="dialogSelectButtonGroupVisible=false">Cancel</el-button>
                 </el-dialog>
                 
                 <!-- 保存按钮弹出窗口 -->
-                <el-dialog title="请输入设计结果名称" :visible.sync="dialogSaveVisible">
+                <el-dialog title="Please input the design name" :visible.sync="dialogSaveVisible">
                     <el-form :inline="true">
                         <el-form-item label="name">
                             <el-input v-model="templateName"></el-input>
                         </el-form-item>
-                        <el-button type="primary" @click="submitTotalForm">确定</el-button>
-                        <el-button @click="dialogSaveVisible=false">取消</el-button>
+                        <el-button type="primary" @click="submitTotalForm">Confirm</el-button>
+                        <el-button @click="dialogSaveVisible=false">Cancel</el-button>
                     </el-form>
                 </el-dialog>
 
-                <el-dialog title="请输入导出路径" :visible.sync="dialogExportVisible">
+                <el-dialog title="Please input export path" :visible.sync="dialogExportVisible">
                     <el-form>
-                        <el-form-item label="相对路径">
+                        <el-form-item label="System path">
                             <el-input v-model="exportRelativePath" :disabled="fixPath!=0"></el-input>
                             <el-radio-group v-model="fixPath">
-                                <el-radio :label="3">文档</el-radio>
-                                <el-radio :label="2">下载</el-radio>
-                                <el-radio :label="1">桌面</el-radio>
-                                <el-radio :label="0">其它</el-radio>
+                                <el-radio :label="3">Documents</el-radio>
+                                <el-radio :label="2">Downloads</el-radio>
+                                <el-radio :label="1">Desktop</el-radio>
+                                <el-radio :label="0">Other</el-radio>
                             </el-radio-group>
                         </el-form-item>
-                        <el-form-item label="文件名">
+                        <el-form-item label="File Name">
                             <el-input v-model="exportFileName"></el-input>
                         </el-form-item>
-                        <el-button type="primary" @click="dialogExportVisible=false; testAxios();">确定</el-button>
-                        <el-button @click="dialogExportVisible=false">取消</el-button>
+                        <el-button type="primary" @click="dialogExportVisible=false; testAxios();">Confirm</el-button>
+                        <el-button @click="dialogExportVisible=false">Cancel</el-button>
                     </el-form>
                 </el-dialog>
 
                 <!-- Segment管理弹窗 -->
-                <el-dialog title="管理Segment" :visible.sync="dialogSegmentManagementVisible">
+                <el-dialog title="Edit Segment Info" :visible.sync="dialogSegmentManagementVisible">
                     <el-table
                     :data="segmentList"
                     stripe
@@ -262,92 +262,92 @@
                         </el-table-column>
                         <el-table-column
                             prop="name"
-                            label="名称">
+                            label="name">
                         </el-table-column>
-                        <el-table-column label="操作">
+                        <el-table-column label="Operations">
                             <template slot-scope="scope">
-                                <el-button size="mini" @click="manageSegmentId=scope.row.id;editSegmentChild();">编辑</el-button>
-                                <el-button size="mini" type="danger" @click="dialogDeleteSegmentVisible=true; manageSegmentId=scope.row.id;">删除</el-button>
+                                <el-button size="mini" @click="manageSegmentId=scope.row.id;editSegmentChild();">Edit</el-button>
+                                <el-button size="mini" type="danger" @click="dialogDeleteSegmentVisible=true; manageSegmentId=scope.row.id;">Delete</el-button>
                             </template>
                         </el-table-column>
                     </el-table>
                    
-                        <el-button type="primary" icon="el-icon-circle-plus-outline" @click="newSegmentName=''; dialogSegmentNameVisible=true">新增segment</el-button>
-                    <el-button type="text" @click="dialogSegmentManagementVisible=false">返回</el-button>
+                        <el-button type="primary" icon="el-icon-circle-plus-outline" @click="newSegmentName=''; dialogSegmentNameVisible=true">Add Segment</el-button>
+                    <el-button type="text" @click="dialogSegmentManagementVisible=false">Cancel</el-button>
                 </el-dialog>
 
                 <!-- 为新建Segment取名 -->
-                <el-dialog title="填写名称" :visible.sync="dialogSegmentNameVisible">
-                    <el-input v-model="newSegmentName" placeholder="请输入新增Segment组的名称"></el-input>
+                <el-dialog title="Input Name" :visible.sync="dialogSegmentNameVisible">
+                    <el-input v-model="newSegmentName" placeholder="Please input segment name"></el-input>
                     <div>
                         <el-button type="primary" size="mini" @click="putSegment(segmentCount, newSegmentName, 1, defaultSegmentId);
-                            dialogSegmentNameVisible=false; segmentList.push({id: segmentCount, name: newSegmentName}); segmentCount++;">确定</el-button>
-                        <el-button size="mini" type="text" @click="dialogSegmentNameVisible=false;">取消</el-button>
+                            dialogSegmentNameVisible=false; segmentList.push({id: segmentCount, name: newSegmentName}); segmentCount++;">Confirm</el-button>
+                        <el-button size="mini" type="text" @click="dialogSegmentNameVisible=false;">Cancel</el-button>
                     </div>
                 </el-dialog>
 
                 <!-- Segment删除提示 -->
                 <el-dialog
-                    title="提示"
+                    title="Tips"
                     :visible.sync="dialogDeleteSegmentVisible">
-                    <span>确认删除编号为 {{manageSegmentId}} 的Segment组？</span><br/>
-                    <span>此处该操作不可逆</span>
+                    <span>Do you confirm to delete this segment(id={{manageSegmentId}})?</span><br/>
+                    <span>This operation is not reversible</span>
                     <span slot="footer" class="dialog-footer">
-                        <el-button type="primary" @click="deleteSegment(manageSegmentId)">确定</el-button>
-                        <el-button @click="dialogDeleteSegmentVisible=false">取消</el-button>
+                        <el-button type="primary" @click="deleteSegment(manageSegmentId)">Confirm</el-button>
+                        <el-button @click="dialogDeleteSegmentVisible=false">Cancel</el-button>
                     </span>
                 </el-dialog>
 
                 <!-- 管理Segment子组件的穿梭框 -->
-                <el-dialog title="管理子组件" :visible.sync="dialogSegmentChildVisible">
+                <el-dialog title="Edit Segment Info" :visible.sync="dialogSegmentChildVisible">
                     <el-transfer :data="availableSegmentChild" v-model="segmentChildMember"></el-transfer>
-                    <el-button type="primary" @click="alterSegmentChild(); dialogSegmentChildVisible=false">确定</el-button>
-                    <el-button type="text" @click="dialogSegmentChildVisible=false">取消</el-button>
+                    <el-button type="primary" @click="alterSegmentChild(); dialogSegmentChildVisible=false">Confirm</el-button>
+                    <el-button type="text" @click="dialogSegmentChildVisible=false">Cancel</el-button>
                 </el-dialog>
 
                 <!-- 管理group信息 -->
-                <el-dialog title="group信息" :visible.sync="dialogGroupVisible" width="500">
+                <el-dialog title="Edit Mapping Info" :visible.sync="dialogGroupVisible" width="500">
                     <el-table :data="groupList" height="300">
                         <el-table-column property="id" label="id" width="150"></el-table-column>
                         <el-table-column property="name" label="name" width="300"></el-table-column>
-                        <el-table-column label="操作" fixed="right">
+                        <el-table-column label="Operation" fixed="right">
                             <template slot-scope="scope">
-                                <el-button size="medium" @click="groupId=scope.row.id; groupEdit();">编辑</el-button>
-                                <el-button size="medium" type="danger" @click="groupId = scope.row.id; dialogDeleteGroupVisible = true;">删除</el-button>
+                                <el-button size="medium" @click="groupId=scope.row.id; groupEdit();">Edit</el-button>
+                                <el-button size="medium" type="danger" @click="groupId = scope.row.id; dialogDeleteGroupVisible = true;">Delete</el-button>
                             </template>
                         </el-table-column>
                     </el-table>
-                    <el-button size="mini" type="primary" icon="el-icon-circle-plus-outline" @click="dialogAddGroupVisible = true">新增group</el-button>
-                    <el-button size="mini" type="text" @click="dialogGroupVisible=false">返回</el-button>
+                    <el-button size="mini" type="primary" icon="el-icon-circle-plus-outline" @click="dialogAddGroupVisible = true">Add Mapping</el-button>
+                    <el-button size="mini" type="text" @click="dialogGroupVisible=false">Cancel</el-button>
                 </el-dialog>
 
                 <!-- group删除提示 -->
                 <el-dialog
-                    title="提示"
+                    title="Tips"
                     :visible.sync="dialogDeleteGroupVisible">
-                    <span>确认删除？</span>
+                    <span>Are you sure?</span>
                     <span slot="footer" class="dialog-footer">
-                        <el-button type="primary" @click="groupDeleteConfirm">确定</el-button>
-                        <el-button @click="dialogDeleteGroupVisible=false">取消</el-button>
+                        <el-button type="primary" @click="groupDeleteConfirm">Confirm</el-button>
+                        <el-button @click="dialogDeleteGroupVisible=false">Cancel</el-button>
                     </span>
                 </el-dialog>
                 <!-- 新增group信息 -->
-                <el-dialog title="请输入group名称" :visible.sync="dialogAddGroupVisible">
+                <el-dialog title="Please input mapping name" :visible.sync="dialogAddGroupVisible">
                     <el-form>
                         <el-form-item label="name">
                             <el-input v-model="newGroupName"></el-input>
                         </el-form-item>
                         <el-button type="primary" @click="putGroup(groupCount, newGroupName, 1); dialogAddGroupVisible=false;
-                            groupList.push({id:groupCount, name:newGroupName}); groupCount++">确定</el-button>
-                        <el-button @click="dialogAddGroupVisible=false">取消</el-button>
+                            groupList.push({id:groupCount, name:newGroupName}); groupCount++">Confirm</el-button>
+                        <el-button @click="dialogAddGroupVisible=false">Cancel</el-button>
                     </el-form>
                 </el-dialog>
                 <!-- group双向穿梭框 -->
-                <el-dialog title="编辑group" :visible.sync="dialogEditGroupVisible">
+                <el-dialog title="Edit Mapping Info" :visible.sync="dialogEditGroupVisible">
                     <el-form>
-                        <el-transfer v-model="groupContent" :data="availableElements" :titles="['可用元素', 'group']"></el-transfer>
-                        <el-button type="primary" @click="submitGroup()">确定</el-button>
-                        <el-button @click="dialogEditGroupVisible=false">取消</el-button>
+                        <el-transfer v-model="groupContent" :data="availableElements" :titles="['Available', 'Mapping']"></el-transfer>
+                        <el-button type="primary" @click="submitGroup()">Confirm</el-button>
+                        <el-button @click="dialogEditGroupVisible=false">Cancel</el-button>
                     </el-form>
                 </el-dialog>
             </div>
@@ -613,7 +613,7 @@
                                     if (response.data == "SAVE SUCCESSFULLY") {
                                         _this.loading = false
                                         _this.$message({
-                                            message: '导出成功',
+                                            message: 'Success!',
                                             type: 'success',
                                             duration: 1500
                                         });
@@ -658,7 +658,7 @@
                                     if (response.data == "SAVE SUCCESSFULLY") {
                                         _this.loading = false
                                         _this.$message({
-                                            message: '导出成功',
+                                            message: 'Success',
                                             type: 'success',
                                             duration: 1500
                                         });
@@ -720,7 +720,7 @@
                                     if (response.data == "SAVE SUCCESSFULLY") {
                                         _this.loading = false
                                         _this.$message({
-                                            message: '导出成功',
+                                            message: 'Success',
                                             type: 'success',
                                             duration: 1500
                                         });
@@ -1100,7 +1100,7 @@
                 })
                 
                 this.$message({
-                    message: '编辑成功！',
+                    message: 'Success!',
                     type: 'success',
                     duration: 1500
                 });
@@ -1137,7 +1137,7 @@
                 });
                 this.dialogDeleteGroupVisible = false;
                 this.$message({
-                    message: '删除成功！',
+                    message: 'Success!',
                     type: 'success',
                     duration: 1500
                 });
@@ -1247,7 +1247,7 @@
                 })
 
                 this.$message({
-                    message: '编辑成功！',
+                    message: 'Success!',
                     type: 'success',
                     duration: 1500
                 });
@@ -1282,7 +1282,7 @@
                 
                 this.dialogDeleteSegmentVisible=false
                 this.$message({
-                    message: '删除成功！',
+                    message: 'Success!',
                     type: 'success',
                     duration: 1500
                 });
@@ -1333,7 +1333,7 @@
                     this.dialogSaveVisible = true
                 } else {
                     this.$message({
-                        message: '已保存',
+                        message: 'Success!',
                         type: 'success',
                         duration: 1500
                     });
@@ -1381,7 +1381,7 @@
                     }
                 })
                 this.$message({
-                    message: '编辑成功！',
+                    message: 'Success!',
                     type: 'success',
                     duration: 1500
                 });
@@ -1429,7 +1429,7 @@
                     this.$message({
                         type: 'error',
                         duration: 1500,
-                        message: '不可放大'
+                        message: 'Error!'
                     });
                 } else {
                     width += 10
@@ -1446,7 +1446,7 @@
                     this.$message({
                         type: 'error',
                         duration: 1500,
-                        message: '不可缩小'
+                        message: 'Error!'
                     });
                 } else {
                     this.workspaceDivClass.width = width - 10 + '%'
