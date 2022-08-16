@@ -280,7 +280,7 @@
                 <el-dialog title="Input Name" :visible.sync="dialogSegmentNameVisible">
                     <el-input v-model="newSegmentName" placeholder="Please input segment name"></el-input>
                     <div>
-                        <el-button type="primary" size="mini" @click="putSegment(segmentCount, newSegmentName, 1, defaultSegmentId);
+                        <el-button type="primary" size="mini" @click="putSegment(segmentCount, newSegmentName, 1, defaultSegmentId, 0);
                             dialogSegmentNameVisible=false; segmentList.push({id: segmentCount, name: newSegmentName}); segmentCount++;">Confirm</el-button>
                         <el-button size="mini" type="text" @click="dialogSegmentNameVisible=false;">Cancel</el-button>
                     </div>
@@ -458,6 +458,7 @@
                         segmentId1: {
                             name: 
                             parentId: 
+                            groupId: 
                             ledMember: [ledId1, ledId2, ...]
                             segmentMember: [segmentId1, segmentId2]
                         }
@@ -823,11 +824,12 @@
                                     let segmentId = results.rows.item(i).id
                                     let name = results.rows.item(i).name;
                                     let parentId = results.rows.item(i).parentId;
+                                    let groupId = results.rows.item(i).groupId
                                     // // 存储default分组的id值
                                     // if (name == 'default') {
                                     //     that.defaultSegmentId = segmentId;
                                     // }
-                                    that.putSegment(segmentId, name, 0,parentId);
+                                    that.putSegment(segmentId, name, 0,parentId, groupId);
                                 }
                             }
                         });
@@ -889,7 +891,7 @@
                         break
                     // 新建一个segment并生成7个相应的led
                     case 3:
-                        this.putSegment(this.segmentCount, "SegmentGroup" + this.segmentCount, 1,0);
+                        this.putSegment(this.segmentCount, "SegmentGroup" + this.segmentCount, 1,0,0);
                         rangeIndex = [index, index-1+this.rowGridNum, index+1+this.rowGridNum, index+2*this.rowGridNum,
                             index-1+3*this.rowGridNum, index+1+3*this.rowGridNum, index+4*this.rowGridNum]
                         for (let i = 0 ; i < rangeIndex.length ; ++i) {
@@ -945,7 +947,7 @@
 
                 if (isCreate == 1) {
                     db.transaction(function (context) {  
-                        context.executeSql('INSERT INTO Button (id,name,hwId,areaId,templateId,boardType,parentId) VALUES (?,?,?,?,?,?,?)',[elementId,_name,_hwId,index,templateId,boardType,0]);
+                        context.executeSql('INSERT INTO Button (id,name,hwId,areaId,templateId,boardType,parentId) VALUES (?,?,?,?,?,?,?)',[elementId,_name,_hwId,index,templateId,boardType,_parentId]);
                     })
                 }
             },
@@ -982,11 +984,11 @@
                 //将LED插入数据库
                 if (isCreate == 1) {
                     db.transaction(function (context) {  
-                        context.executeSql('INSERT INTO LED (id,name,hwId,areaId,segmentId,templateId,boardType,parentId) VALUES (?,?,?,?,?,?,?,?)',[elementId,_name,_hwId,index,_segmentId,templateId,boardType,0]);
+                        context.executeSql('INSERT INTO LED (id,name,hwId,areaId,segmentId,templateId,boardType,parentId) VALUES (?,?,?,?,?,?,?,?)',[elementId,_name,_hwId,index,_segmentId,templateId,boardType,_parentId]);
                     });
                 }
             },
-            putSegment(segmentId, _name, isCreate,_parentId) {
+            putSegment(segmentId, _name, isCreate,_parentId, _groupId) {
                 let templateId = this.templateId
                 let boardType = this.boardType
                 // 新建一个segment组别
@@ -994,12 +996,16 @@
                     name: _name,
                     ledMember: [],
                     segmentMember: [],
-                    parentId:_parentId
+                    parentId:_parentId,
+                    groupId: _groupId
+                }
+                if (_groupId != 0) {
+                    this.group[_groupId].segmentMember.push(segmentId)
                 }
                 
                 if (isCreate == 1) {
                     db.transaction(function (context) {  
-                        context.executeSql('INSERT INTO Segment (id,name,templateId,boardType,parentId) VALUES (?,?,?,?,?)',[segmentId,_name,templateId,boardType,0]);
+                        context.executeSql('INSERT INTO Segment (id,name,templateId,boardType,parentId, groupId) VALUES (?,?,?,?,?,?)',[segmentId,_name,templateId,boardType,_parentId,_groupId]);
                     });
                 }
                 
@@ -1011,7 +1017,8 @@
                 this.group[groupId] = {
                     name: _name,
                     buttonMember: [],
-                    ledMember: []
+                    ledMember: [],
+                    segmentMember: [],
                 }
 
                 if (isCreate == 1) {
@@ -1035,7 +1042,6 @@
             //点击编辑group
             groupEdit() {
                 let groupIdTmp = this.groupId;
-                console.log(this.groupId)
                 this.availableElements =[];
                 this.groupContent = [];
                 for (let buttonId in this.button) {
@@ -1045,27 +1051,42 @@
                         this.availableElements.push({
                             key: 'Button:'+buttonId,
                             label: 'Button:'+name,
-                            type:1,
-                            id: buttonId
                         })
                     }
                     if (parentId == groupIdTmp) {
                         this.groupContent.push("Button:"+buttonId)
                     }
                 }
+
+                // 同一个led只能被分为group或是segment
                 for (let ledId in this.led) {
                     let name = this.led[ledId].name
                     let parentId = this.led[ledId].parentId
-                    if (parentId == 0 || parentId == groupIdTmp) {
+                    let segmentId = this.led[ledId].segmentId
+                    if (segmentId == 0 && (parentId == 0 || parentId == groupIdTmp)) {
                         this.availableElements.push({
                             key: "LED:"+ledId,
                             label: "LED:"+name,
-                            type: 2,
-                            id: ledId
                         })
                     }
                     if (parentId == groupIdTmp) {
                         this.groupContent.push("LED:"+ledId)
+                    }
+                }
+
+                // 只允许对游离的segment进行group分组
+                for (let segmentId in this.segment) {
+                    let name = this.segment[segmentId].name
+                    let groupId = this.segment[segmentId].groupId
+                    let parentId = this.segment[segmentId].parentId
+                    if ((groupId == 0 || groupId == groupIdTmp) && parentId == 0) {
+                        this.availableElements.push({
+                            key: 'Segment:'+segmentId,
+                            label: 'Segment:'+name,
+                        })
+                    }
+                    if (groupId == groupIdTmp) {
+                        this.groupContent.push("Segment:"+segmentId)
                     }
                 }
                 
@@ -1073,41 +1094,58 @@
             },
             submitGroup(){
                 let groupIdTmp = this.groupId;
-                let buttonChild = []
-                let ledChild = []
+                let targetGroup = this.group[groupIdTmp]
 
                 // 重置所有原始子组件的parentId
                 for (let i in this.group[this.groupId].buttonMember) {
-                    this.button[this.group[this.groupId].buttonMember[i]].parentId = 0
+                    this.button[targetGroup.buttonMember[i]].parentId = 0
                 }
 
-                for (let i in this.group[this.groupId].buttonMember) {
-                    this.led[this.group[this.groupId].ledMember[i]].parentId = 0
+                for (let i in this.group[this.groupId].ledMember) {
+                    this.led[targetGroup.ledMember[i]].parentId = 0
                 }
+
+                for (let i in this.group[this.groupId].segmentMember) {
+                    this.segment[targetGroup.segmentMember[i]].groupId = 0
+                }
+
+                targetGroup.buttonMember = []
+                targetGroup.ledMember = []
+                targetGroup.segmentMember = []
 
                 // 将编辑后的所有子组件的parentId置为当前groupId
                 for (let i in this.groupContent) {
                     let element = this.groupContent[i]
-                    if (element.split(':')[0] == 'Button') {
-                        let elementId = element.split(':')[1];
+                    let elementName = element.split(':')[0]
+                    let elementId = element.split(':')[1]
+                    if (elementName == 'Button') {
                         this.button[elementId].parentId = groupIdTmp
-                        buttonChild.push(elementId)
-                    } else {
-                        let elementId = element.split(':')[1];
+                        targetGroup.buttonMember.push(elementId)
+                    } else if (elementName == 'LED') {
                         this.led[elementId].parentId = groupIdTmp
-                        ledChild.push(elementId)
+                        targetGroup.ledMember.push(elementId)
+                    } else {
+                        this.segment[elementId].groupId = groupIdTmp
+                        targetGroup.segmentMember.push(elementId)
                     }
                 }
+                let buttonChild = targetGroup.buttonMember
+                let ledChild = targetGroup.ledMember
+                let segmentChild = targetGroup.segmentMember
+                
                 db.transaction(function (context) {
                     context.executeSql('UPDATE Button SET parentId = 0 WHERE parentId = ?', [groupIdTmp])
                     context.executeSql('UPDATE LED SET parentId = 0 WHERE parentId = ?', [groupIdTmp])
-                    for (let i in buttonChild){
+                    context.executeSql('UPDATE Segment SET groupId = 0 WHERE groupId = ?', [groupIdTmp])
+                    for (let i in buttonChild) {
                         context.executeSql('UPDATE Button SET parentId=? WHERE id =?',[groupIdTmp,buttonChild[i]]);
                     }
                     for (let i in ledChild) {
                         context.executeSql('UPDATE LED SET parentId=? WHERE id =?',[groupIdTmp,ledChild[i]]);
                     }      
-                    
+                    for (let i in segmentChild) {
+                        context.executeSql('UPDATE Segment SET groupId=? WHERE id=?',[groupIdTmp,segmentChild[i]])
+                    }
                 })
                 
                 this.$message({
@@ -1123,6 +1161,7 @@
                 let groupIdTmp = this.groupId;
                 let buttonMember = this.group[groupIdTmp].buttonMember
                 let ledMember = this.group[groupIdTmp].ledMember
+                let segmentMember = this.group[groupIdTmp].segmentMember
 
                 // 重置所有子组件的parentId
                 for (let i in buttonMember.length) {
@@ -1130,6 +1169,9 @@
                 }
                 for (let i in ledMember.length) {
                     this.led[ledMember[i]].parentId = 0
+                }
+                for (let i in segmentMember.length) {
+                    this.segment[segmentMember[i]].groupId = 0
                 }
 
                 // 删除group和groupList中的对应项
@@ -1145,6 +1187,7 @@
                     context.executeSql('DELETE FROM Groups WHERE id = ?',[groupIdTmp]);
                     context.executeSql('UPDATE Button SET parentId=0 WHERE parentId =?',[groupIdTmp]);
                     context.executeSql('UPDATE LED SET parentId=0 WHERE parentId =?',[groupIdTmp]);
+                    context.executeSql('UPDATE Segment SET groupId=0 WHERE groupId=?', [groupIdTmp])
                 });
                 this.dialogDeleteGroupVisible = false;
                 this.$message({
@@ -1184,8 +1227,9 @@
                 }
 
                 // 游离的led或是parent为选中segment的所有led
+                // 同时除去所有已选择group分组的led
                 for (let i in this.led) {
-                    if (this.led[i].segmentId == 0 || this.led[i].segmentId==this.manageSegmentId) {
+                    if ((this.led[i].segmentId == 0 || this.led[i].segmentId==this.manageSegmentId) && this.led[i].parentId == 0) {
                         this.availableSegmentChild.push(
                             {
                                 key: 'led:'+i,
@@ -1199,10 +1243,11 @@
                     }
                 }
 
-                // 游离的led或是parent为选中segment的所有segment, 并且要保证添加的segment不是选中的segment的parent以及其本身
+                // 游离的segment或是parent为选中segment的所有segment, 并且要保证添加的segment不是选中的segment的parent以及选中的segment其本身
+                // 同时，不考虑所有已被group分组的segment
                 for (let i in this.segment) {
                     if ((this.segment[i].parentId == 0 || this.segment[i].parentId == this.manageSegmentId) 
-                        && isOfSegmentChild(this.manageSegmentId, i) == false && i != this.manageSegmentId) {
+                        && isOfSegmentChild(this.manageSegmentId, i) == false && i != this.manageSegmentId && this.segment[i].groupId == 0) {
                         this.availableSegmentChild.push(
                             {
                                 key: 'segment:'+i,
