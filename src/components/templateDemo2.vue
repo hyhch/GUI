@@ -1132,7 +1132,7 @@
                 let buttonChild = targetGroup.buttonMember
                 let ledChild = targetGroup.ledMember
                 let segmentChild = targetGroup.segmentMember
-                
+
                 db.transaction(function (context) {
                     context.executeSql('UPDATE Button SET parentId = 0 WHERE parentId = ?', [groupIdTmp])
                     context.executeSql('UPDATE LED SET parentId = 0 WHERE parentId = ?', [groupIdTmp])
@@ -1164,13 +1164,13 @@
                 let segmentMember = this.group[groupIdTmp].segmentMember
 
                 // 重置所有子组件的parentId
-                for (let i in buttonMember.length) {
+                for (let i in buttonMember) {
                     this.button[buttonMember[i]].parentId = 0
                 }
-                for (let i in ledMember.length) {
+                for (let i in ledMember) {
                     this.led[ledMember[i]].parentId = 0
                 }
-                for (let i in segmentMember.length) {
+                for (let i in segmentMember) {
                     this.segment[segmentMember[i]].groupId = 0
                 }
 
@@ -1195,6 +1195,7 @@
                     type: 'success',
                     duration: 1500
                 });
+
             },
 
             // 打开管理Segment弹窗前进行的初始化工作
