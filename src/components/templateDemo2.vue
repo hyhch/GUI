@@ -300,7 +300,7 @@
 
                 <!-- 管理Segment子组件的穿梭框 -->
                 <el-dialog title="Edit Segment Info" :visible.sync="dialogSegmentChildVisible">
-                    <el-transfer :data="availableSegmentChild" v-model="segmentChildMember"></el-transfer>
+                    <el-transfer :data="availableSegmentChild" v-model="segmentChildMember" :titles="['Available', 'Segment']></el-transfer>
                     <el-button type="primary" @click="alterSegmentChild(); dialogSegmentChildVisible=false">Confirm</el-button>
                     <el-button type="text" @click="dialogSegmentChildVisible=false">Cancel</el-button>
                 </el-dialog>
