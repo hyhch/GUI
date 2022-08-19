@@ -1,7 +1,7 @@
 <template>
     <div>
         <el-col :span="2" style="background-color:#F2F6FC;height:800px;text-align: center;">
-            <div style="text-align:center;margin-bottom: 20px;font-size: 20px;">Elements</div>
+            <div style="text-align: center;margin-bottom: 20px;font-size: 20px;">Elements</div>
             <div draggable="true" id="button" @dragstart="dragElementType=1" @dragend="dragElementType=0">
             </div>
             <p style="margin-bottom:20px">Button</p>
@@ -53,14 +53,14 @@
                         <!-- 用键值对的方式遍历gridElementOverlap中的一个对象 -->
                         <!-- 根据gridElementOverlap的结构，第一个v-for遍历了一个网格中所有组件的类型 -->
                         <!-- elementList为某一类型的组件列表，elementName为组件名 -->
-                        <div v-for="(elementList, elementName, index) in gridElementOverlap[this.gridDialogIndex]" :key="index">
+                        <div v-for="(elementList, elementName, index) in targetGridElement" :key="index">
 
                             <!-- v-if根据每个组件的类型（elementName的值）生成对应表单项。 -->
                             <div v-if="elementName==='button'">
-                                <el-divider v-if="elementList.length>0"><h4>BUTTON</h4></el-divider>
+                                <el-divider><h4>BUTTON</h4></el-divider>
                                 <!-- 第二个v-for遍历了某一类型组件的组件列表（elementList） -->
-                                <div v-for="(buttonId, index) in elementList" :key="index">
-                                    <div v-if="targetGridElement.button[buttonId].toDelete==0">
+                                <div v-for="(buttonElement, buttonId, index) in elementList" :key="index">
+                                    <div v-if="buttonElement.toDelete==0">
                                         <el-row>
                                             <el-col :span="18">
                                                 <p>Id:{{buttonId}}</p>
@@ -70,9 +70,10 @@
                                                      dialogDeleteButtonVisible=true;" size="medium">Delete</el-button>
                                             </el-col>
                                         </el-row>
-                                        <el-col :span="18">
+                                        <el-row>
+                                            <el-col :span="18">
                                                 <p v-if="targetGridElement.button[buttonId].parentId!=0">
-                                                    Mapping: {{group[targetGridElement.button[buttonId].parentId].name}}
+                                                    Mapping: {{group[buttonElement.parentId].name}}
                                                 </p>
                                                 <p v-else>Mapping: none</p>
                                             </el-col>
@@ -80,11 +81,12 @@
                                                 <el-button type="info" icon="el-icon-folder-opened" @click="selectButtonId=buttonId;
                                                 dialogSelectButtonGroupVisible=true" size="medium">Change</el-button>
                                             </el-col>
+                                        </el-row>
                                         <el-form-item label="name">
-                                            <el-input v-model="targetGridElement.button[buttonId].name"></el-input>
+                                            <el-input v-model="buttonElement.name"></el-input>
                                         </el-form-item>
                                         <el-form-item label="hwId">
-                                            <el-input v-model="targetGridElement.button[buttonId].hwId"></el-input>
+                                            <el-input v-model="buttonElement.hwId"></el-input>
                                         </el-form-item>
                                         
                                     </div> 
@@ -93,9 +95,9 @@
 
                             <!-- 同Button -->
                             <div v-if="elementName==='led'">
-                                <el-divider v-if="elementList.length>0"><h4>LED</h4></el-divider>
-                                <div v-for="(ledId, index) in elementList" :key="index">
-                                    <div v-if="targetGridElement.led[ledId].toDelete==0">
+                                <el-divider><h4>LED</h4></el-divider>
+                                <div v-for="(ledElement, ledId, index) in elementList" :key="index">
+                                    <div v-if="ledElement.toDelete==0">
                                         <el-row>
                                             <el-col :span="8">
                                                 <p>Id:{{ledId}}</p>
@@ -108,7 +110,7 @@
                                         <el-row>
                                             <el-col :span="18">
                                                 <p v-if="targetGridElement.led[ledId].parentId!=0">
-                                                    Mapping: {{group[targetGridElement.led[ledId].parentId].name}}
+                                                    Mapping: {{group[ledElement.parentId].name}}
                                                 </p>
                                                 <p v-else>Mapping: none</p>
                                             </el-col>
@@ -119,7 +121,7 @@
                                         </el-row>
                                         <el-row>
                                             <el-col :span="18">
-                                                <p v-if="segment[targetGridElement.led[ledId].segmentId]">Segment: {{segment[targetGridElement.led[ledId].segmentId].name}}</p>
+                                                <p v-if="segment[ledElement.segmentId]">Segment: {{segment[ledElement.segmentId].name}}</p>
                                                 <p v-else>Segment: none</p>
                                             </el-col>
                                             <el-col :span="6">
@@ -128,10 +130,10 @@
                                             </el-col>
                                         </el-row>
                                         <el-form-item label="name">
-                                            <el-input v-model="targetGridElement.led[ledId].name"></el-input> 
+                                            <el-input v-model="ledElement.name"></el-input> 
                                         </el-form-item>
                                         <el-form-item label="hwId">
-                                            <el-input v-model="targetGridElement.led[ledId].hwId"></el-input>
+                                            <el-input v-model="ledElement.hwId"></el-input>
                                         </el-form-item>
                                         
                                     </div>
@@ -140,7 +142,7 @@
                         </div>
                         
                     <el-button type="primary" @click="submitGridDialogForm">Confirm</el-button>
-                    <el-button @click="dialogFormVisible=false">Cancel</el-button>
+                    <el-button @click="targetGridElement={button:{},led:{}};dialogFormVisible=false">Cancel</el-button>
                         
                     </el-form>
                 </el-dialog>
@@ -178,15 +180,9 @@
                         :value="segId">
                         </el-option>
                     </el-select>
-                    <el-button type="primary" @click="targetGridElement.led[selectLedId].segmentId=selectSegmentId;
-                        targetGridElement.led[selectLedId].toAlterSegment=1; dialogSelectSegmentVisible=false;">Confirm</el-button>
+                    <el-button type="primary" @click="targetGridElement.led[selectLedId].segmentId=selectSegmentId;dialogSelectSegmentVisible=false;">Confirm</el-button>
                     <el-button @click="dialogSelectSegmentVisible=false">Cancel</el-button>
                 </el-dialog>
-
-
-
-
-
 
                 <!-- 下拉菜单选择button所在group分组 -->
                 <el-dialog title="Select Mapping" :visible.sync="dialogSelectLedGroupVisible">
@@ -280,7 +276,7 @@
                 <el-dialog title="Input Name" :visible.sync="dialogSegmentNameVisible">
                     <el-input v-model="newSegmentName" placeholder="Please input segment name"></el-input>
                     <div>
-                        <el-button type="primary" size="mini" @click="putSegment(segmentCount, newSegmentName, 1, defaultSegmentId, 0);
+                        <el-button type="primary" size="mini" @click="putSegment(segmentCount, newSegmentName, '','',1, defaultSegmentId, 0);
                             dialogSegmentNameVisible=false; segmentList.push({id: segmentCount, name: newSegmentName}); segmentCount++;">Confirm</el-button>
                         <el-button size="mini" type="text" @click="dialogSegmentNameVisible=false;">Cancel</el-button>
                     </div>
@@ -293,27 +289,78 @@
                     <span>Do you confirm to delete this segment(id={{manageSegmentId}})?</span><br/>
                     <span>This operation is not reversible</span>
                     <span slot="footer" class="dialog-footer">
-                        <el-button type="primary" @click="deleteSegment(manageSegmentId)">Confirm</el-button>
+                        <el-button type="primary" @click="deleteSegment">Confirm</el-button>
                         <el-button @click="dialogDeleteSegmentVisible=false">Cancel</el-button>
                     </span>
                 </el-dialog>
 
                 <!-- 管理Segment子组件的穿梭框 -->
                 <el-dialog title="Edit Segment Info" :visible.sync="dialogSegmentChildVisible">
-                    <el-transfer :data="availableSegmentChild" v-model="segmentChildMember" :titles="['Available', 'Segment']></el-transfer>
+                    <el-transfer :data="availableSegmentChild" v-model="segmentChildMember" :titles="['Available', 'Segment']"></el-transfer>
                     <el-button type="primary" @click="alterSegmentChild(); dialogSegmentChildVisible=false">Confirm</el-button>
                     <el-button type="text" @click="dialogSegmentChildVisible=false">Cancel</el-button>
                 </el-dialog>
 
+                <!--设置group mapping中各个组件的attribute-->
+                <el-dialog title="Mapping Attribute" :visible.sync="dialogGroupAttributeVisible">
+                    <el-form :inline="true">
+                        <div v-for="(elementList, elementName, index) in groupAttribute" :key="index">
+                            <div v-if="elementName=='button'">
+                                <el-divider><h4>BUTTON</h4></el-divider>
+                                <div v-for="(buttonAttribute, buttonId, index) in elementList" :key="index">
+                                    <p>id: {{buttonId}}</p>
+                                    <p>name: {{button[buttonId].name}}</p>
+                                    <el-form-item label="buttonMode">
+                                        <el-input v-model="groupAttribute.button[buttonId].mode"></el-input>
+                                    </el-form-item>
+                                </div>
+                            </div>
+
+                            <div v-if="elementName=='led'">
+                                <el-divider><h4>LED</h4></el-divider>
+                                <div v-for="(ledAttribute, ledId, index) in elementList" :key="index">
+                                    <p>id: {{ledId}}</p>
+                                    <p>name: {{led[ledId].name}}</p>
+                                    <el-form-item label="ledMode">
+                                        <el-input v-model="groupAttribute.led[ledId].mode"></el-input>
+                                    </el-form-item>
+                                    <el-form-item label="mappingName">
+                                        <el-input v-model="groupAttribute.led[ledId].mappingName"></el-input>
+                                    </el-form-item>
+                                </div>
+                            </div>
+
+                            <div v-if="elementName=='segment'">
+                                <el-divider><h4>SEGMENT</h4></el-divider>
+                                <div v-for="(segmentAttribute, segmentId, index) in elementList" :key="index">
+                                    <p>id: {{segmentId}}</p>
+                                    <p>name: {{segment[segmentId].name}}</p>
+                                    <el-form-item label="segmentMode">
+                                        <el-input v-model="groupAttribute.segment[segmentId].mode"></el-input>
+                                    </el-form-item>
+                                    <el-form-item label="mappingName">
+                                        <el-input v-model="groupAttribute.segment[segmentId].mappingName"></el-input>
+                                    </el-form-item>
+                                </div>
+                            </div>
+                            
+
+                        </div>
+                        <el-button type="primary" @click="submitMapping">Confirm</el-button>
+                        <el-button @click="groupAttribute={button:{},led:{},segment:{}};dialogGroupAttributeVisible=false">Cancel</el-button>
+                    </el-form>
+                </el-dialog>
+
                 <!-- 管理group信息 -->
-                <el-dialog title="Edit Mapping Info" :visible.sync="dialogGroupVisible" width="500">
-                    <el-table :data="groupList" height="300">
-                        <el-table-column property="id" label="id" width="150"></el-table-column>
-                        <el-table-column property="name" label="name" width="300"></el-table-column>
+                <el-dialog title="Edit Mapping Info" :visible.sync="dialogGroupVisible">
+                    <el-table :data="groupList" style="width: 100%">
+                        <el-table-column property="id" label="id"></el-table-column>
+                        <el-table-column property="name" label="name"></el-table-column>
                         <el-table-column label="Operation" fixed="right">
                             <template slot-scope="scope">
-                                <el-button size="medium" @click="groupId=scope.row.id; groupEdit();">Edit</el-button>
-                                <el-button size="medium" type="danger" @click="groupId = scope.row.id; dialogDeleteGroupVisible = true;">Delete</el-button>
+                                <el-button size="small" @click="groupId=scope.row.id; groupEdit();">Edit</el-button>
+                                <el-button size="small" @click="groupId=scope.row.id; groupMappingEdit();">Attribute</el-button>
+                                <el-button size="small" type="danger" @click="groupId = scope.row.id; dialogDeleteGroupVisible = true;">Delete</el-button>
                             </template>
                         </el-table-column>
                     </el-table>
@@ -331,6 +378,7 @@
                         <el-button @click="dialogDeleteGroupVisible=false">Cancel</el-button>
                     </span>
                 </el-dialog>
+
                 <!-- 新增group信息 -->
                 <el-dialog title="Please input mapping name" :visible.sync="dialogAddGroupVisible">
                     <el-form>
@@ -342,11 +390,12 @@
                         <el-button @click="dialogAddGroupVisible=false">Cancel</el-button>
                     </el-form>
                 </el-dialog>
+
                 <!-- group双向穿梭框 -->
                 <el-dialog title="Edit Mapping Info" :visible.sync="dialogEditGroupVisible">
                     <el-form>
                         <el-transfer v-model="groupContent" :data="availableElements" :titles="['Available', 'Mapping']"></el-transfer>
-                        <el-button type="primary" @click="submitGroup()">Confirm</el-button>
+                        <el-button type="primary" @click="submitGroupEdit()">Confirm</el-button>
                         <el-button @click="dialogEditGroupVisible=false">Cancel</el-button>
                     </el-form>
                 </el-dialog>
@@ -365,6 +414,7 @@
         name: 'templateDemo2',
         data() {
             return {
+                shit: '',
                 buttonCount: 1,
                 ledCount: 1,
                 segmentCount: 1,
@@ -392,6 +442,7 @@
                 dialogEditGroupVisible:false,
                 dialogAddGroupVisible:false,
                 dialogDeleteGroupVisible:false,
+                dialogGroupAttributeVisible: false,
                 //编辑group弹窗，默认关闭
                 dialogGroupVisible:false,
                 // 选择segment组别弹窗
@@ -443,22 +494,32 @@
 
                 /*
                     经过尝试，发现把button以及led声明为对象形式，比列表形式更方便（主要是在表单读取网格组件信息时方便在此处索引组件id获取数据）
-                    buttonId: {
-                        name: 
-                        hwId: 
-                        parentId:
+                    button: {
+                        buttonId: {
+                            name: 
+                            hwId: 
+                            parentId:
+                            mappingName:
+                            mode:
+                        }
                     }
-                    ledId: {
-                        name: 
-                        hwId: 
-                        segmentId: 
-                        parentId: 
+                    led: {
+                        ledId: {
+                            name: 
+                            hwId: 
+                            segmentId: 
+                            parentId: 
+                            mappingName:
+                            mode:
+                        }
                     }
                     segment {
                         segmentId1: {
                             name: 
                             parentId: 
                             groupId: 
+                            mappingName:
+                            mode:
                             ledMember: [ledId1, ledId2, ...]
                             segmentMember: [segmentId1, segmentId2]
                         }
@@ -467,6 +528,7 @@
                         groupId1: {
                             name:
                             buttonMember: []
+                            ledMember: []
                             segmentMember: []
                         }
                     }
@@ -477,6 +539,31 @@
                 group:{},
                 //存储group信息的数组
                 groupList: [],
+                /*
+                groupAttribute: {
+                    buttonId: {
+                            mappingName: '',
+                            mode: ''
+                        }
+                    }
+                    ledId: {
+                            mappingName: '',
+                            mode: ''
+                        }
+                    }
+                    segmentId: {
+                            mappingName: '',
+                            mode: ''
+                        }
+                    }
+                },
+                */
+                // 与设置mapping信息的表单做双向绑定
+                groupAttribute: {
+                    button: {},
+                    led: {},
+                    segment: {}
+                },
                 groupContent: [],
                 availableElements: [],
                 newGroupName: '',
@@ -565,6 +652,7 @@
                 let osLedList = []
                 let psSegmentList = []
                 let osSegmentList = []
+                let groupList = []
                 
                 this.loading = true
                 if (this.fixPath == 3) {
@@ -576,6 +664,8 @@
                 } else {
                     1 + 1
                 }
+
+                axios
                 
                 
                 let _this = this
@@ -674,7 +764,7 @@
                     LED.boardType AS boardType, \'led\' AS elType FROM LED INNER JOIN Segment ON LED.segmentId = Segment.id WHERE LED.templateId = ? UNION SELECT SegChild.name AS memberName,\
                      SegParent.id AS segParentId, SegParent.name AS segParentName, SegParent.parentId AS upperId, SegChild.boardType AS boardType, \'segment\' AS elType \
                      FROM Segment AS SegChild INNER JOIN Segment AS SegParent ON SegChild.parentId = SegParent.id WHERE SegChild.templateId = ?)\
-                      ORDER BY segParentId ASC', [_this.templateId, _this.templateId], function(context, results) {
+                      ORDER BY segParentId DESC', [_this.templateId, _this.templateId], function(context, results) {
 
                             let lastSegmentId = ''
                             for (let i = 0 ; i < results.rows.length ; ++i) {
@@ -684,35 +774,33 @@
                                     if (results.rows[i].segParentId != lastSegmentId) {
                                         psSegmentList.push({
                                             name: results.rows[i].segParentName,
-                                            member: [{
-                                                elementName: results.rows[i].memberName,
-                                                elementType: results.rows[i].elType,
-                                            }],
+                                            ledMember: [],
+                                            segmentMember: [],
                                             upperId: results.rows[i].upperId
                                         })
+                                       
                                         lastSegmentId = results.rows[i].segParentId
+                                    }
+                                    if (results.rows[i].elType == 'led') {
+                                        psSegmentList[psSegmentList.length-1].ledMember.push(results.rows[i].memberName)
                                     } else {
-                                        psSegmentList[psSegmentList.length - 1].member.push({
-                                                elementName: results.rows[i].memberName,
-                                                elementType: results.rows[i].elType,
-                                            })
+                                        psSegmentList[psSegmentList.length-1].segmentMember.push(results.rows[i].memberName)
                                     }
                                 } else {
                                     if (results.rows[i].segParentId != lastSegmentId) {
                                         osSegmentList.push({
                                             name: results.rows[i].segParentName,
-                                            member: [{
-                                                elementName: results.rows[i].memberName,
-                                                elementType: results.rows[i].elType,
-                                            }],
+                                            ledMember: [],
+                                            segmentMember: [],
                                             upperId: results.rows[i].upperId
                                         })
+                                       
                                         lastSegmentId = results.rows[i].segParentId
+                                    }
+                                    if (results.rows[i].elType == 'led') {
+                                        osSegmentList[osSegmentList.length-1].ledMember.push(results.rows[i].memberName)
                                     } else {
-                                        osSegmentList[osSegmentList.length - 1].member.push({
-                                                elementName: results.rows[i].memberName,
-                                                elementType: results.rows[i].elType
-                                        })
+                                        osSegmentList[osSegmentList.length-1].segmentMember.push(results.rows[i].memberName)
                                     }
                                 }
                             }
@@ -744,7 +832,82 @@
                                     }
                             });
                     })
-                })
+
+                    // 查询一个Group表关联的所有Button, Led和Segment
+                    context.executeSql("SELECT * FROM( \
+                        SELECT Button.name AS name, '' AS mappingName, Button.mode AS mode, 'button' AS elType, Groups.id AS groupId, Button.templateId AS templateId, \
+                        Groups.name AS groupName, Groups.boardType as boardType FROM Button INNER JOIN Groups ON Button.parentId = Groups.id UNION \
+                        SELECT LED.name AS name, LED.mappingName AS mappingName, LED.mode AS mode, 'led' AS elType, Groups.id AS groupId, LED.templateId AS templateId, \
+                        Groups.name AS groupName, Groups.boardType as boardType FROM LED INNER JOIN Groups ON LED.parentId = Groups.id UNION \
+                        SELECT Segment.name AS name, Segment.mappingName AS mappingName, Segment.mode AS mode, 'segment' AS elType, Groups.id AS groupId, \
+                        Segment.templateId AS templateId, Groups.name AS groupName, Groups.boardType as boardType FROM Segment INNER JOIN Groups ON Segment.groupId = Groups.id \
+                        ) WHERE templateId=? ORDER BY groupId ASC",
+                            [_this.templateId], function(context, results) {
+                                let lastGroupId = ''
+                                for (let i = 0 ; i < results.rows.length ; ++i) {
+                                    if (lastGroupId != results.rows[i].groupId) {
+                                        groupList.push( {
+                                            name: results.rows[i].groupName,
+                                            buttonMember: [],
+                                            ledMember: [],
+                                            segmentMember: [],
+                                        })
+                                        lastGroupId = results.rows[i].groupId
+                                    }
+                                    switch (results.rows[i].elType) {
+                                        case 'button':
+                                            groupList[groupList.length-1].buttonMember.push({
+                                                name: results.rows[i].name,
+                                                mode: results.rows[i].mode
+                                            })
+                                            break;
+                                        case 'led':
+                                            groupList[groupList.length-1].ledMember.push({
+                                                name: results.rows[i].name,
+                                                mappingName: results.rows[i].mappingName,
+                                                mode: results.rows[i].mode
+                                            })
+                                            break;
+                                        case 'segment':
+                                            groupList[groupList.length-1].segmentMember.push({
+                                                name: results.rows[i].name,
+                                                mappingName: results.rows[i].mappingName,
+                                                mode: results.rows[i].mode
+                                            })
+                                            break;
+                                        default:
+                                            break;
+                                    }
+                                    
+                                }
+                                axios ({
+                                    method: 'post',
+                                    url: '/save/functionMapping',
+                                    data: {
+                                        group: groupList
+                                    }
+                                    }).then(function (response) {
+                                        console.log(response.data)
+                                });
+                                axios ({
+                                    method: 'get',
+                                    url: '/save/exportFile',
+                                    params: {
+                                        relativePath: _this.exportRelativePath,
+                                        fileName: _this.exportFileName
+                                    }
+                                    }).then(function (response) {
+                                        if (response.data == "SAVE SUCCESSFULLY") {
+                                            _this.loading = false
+                                            _this.$message({
+                                                message: 'Success',
+                                                type: 'success',
+                                                duration: 1500
+                                            });
+                                        }
+                                });
+                            })
+                    })
                
             },
             pageInit(){
@@ -813,7 +976,8 @@
                                 let name = results.rows.item(i).name
                                 let hwId = results.rows.item(i).hwId;
                                 let parentId = results.rows.item(i).parentId;
-                                that.putButton(index, elementId, name, hwId, 0,parentId);
+                                let mode = results.rows.item(i).mode
+                                that.putButton(index, elementId, name, hwId, mode, 0,parentId);
                             }
                         });
                         // 读取Segment数据
@@ -830,7 +994,9 @@
                                     // if (name == 'default') {
                                     //     that.defaultSegmentId = segmentId;
                                     // }
-                                    that.putSegment(segmentId, name, 0,parentId, groupId);
+                                    let mappingName = results.rows.item(i).mappingName;
+                                    let mode = results.rows.item(i).mode
+                                    that.putSegment(segmentId, name, mappingName, mode, 0,parentId, groupId);
                                 }
                             }
                         });
@@ -844,7 +1010,9 @@
                                 let hwId = results.rows.item(i).hwId
                                 let segmentId = results.rows.item(i).segmentId
                                 let parentId = results.rows.item(i).parentId;
-                                that.putLed(index, elementId, name, hwId, segmentId, 0,parentId);
+                                let mappingName = results.rows.item(i).mappingName;
+                                let mode = results.rows.item(i).mode
+                                that.putLed(index, elementId, name, hwId, mappingName, mode, segmentId, 0,parentId);
                             }
                         });
 
@@ -881,23 +1049,23 @@
                     // 新建一个button
                     case 1:
                         elementName = (this.boardType == 1 ? 'PS_Btn_' : 'OS_Btn_') + this.buttonCount
-                        this.putButton(index, this.buttonCount, elementName, '', 1,0)
+                        this.putButton(index, this.buttonCount, elementName, '','',1,0)
                         this.buttonCount++
                         break
                     // 新建一个led
                     case 2:
                         elementName = (this.boardType == 1 ? 'PS_LED_' : 'OS_LED_') + this.ledCount
-                        this.putLed(index, this.ledCount, elementName, '', this.defaultSegmentId, 1,0)
+                        this.putLed(index, this.ledCount, elementName, '', '','', this.defaultSegmentId, 1,0)
                         this.ledCount++
                         break
                     // 新建一个segment并生成7个相应的led
                     case 3:
-                        this.putSegment(this.segmentCount, "SegmentGroup" + this.segmentCount, 1,0,0);
+                        this.putSegment(this.segmentCount, "SegmentGroup" + this.segmentCount, '', '',1,0,0);
                         rangeIndex = [index, index-1+this.rowGridNum, index+1+this.rowGridNum, index+2*this.rowGridNum,
                             index-1+3*this.rowGridNum, index+1+3*this.rowGridNum, index+4*this.rowGridNum]
                         for (let i = 0 ; i < rangeIndex.length ; ++i) {
                             elementName = (this.boardType == 1 ? 'PS_LED_' : 'OS_LED_') + this.ledCount
-                            this.putLed(rangeIndex[i], this.ledCount, elementName, '', this.segmentCount, 1,0)
+                            this.putLed(rangeIndex[i], this.ledCount, elementName, '', '', '',this.segmentCount, 1,0)
                             this.ledCount++
                         }
                         this.segmentCount++
@@ -908,7 +1076,7 @@
                 }
                 this.dragElementType = 0
             },
-            putButton(index, elementId, _name, _hwId, isCreate,_parentId) {
+            putButton(index, elementId, _name, _hwId, _mode, isCreate,_parentId) {
                 let templateId = this.templateId
                 let boardType = this.boardType
                 // button覆盖的index
@@ -939,20 +1107,21 @@
                 this.button[elementId] = {
                     name: _name,
                     hwId: _hwId,
-                    parentId:_parentId
+                    parentId:_parentId,
+                    mode: _mode
                 }
-
                 if (_parentId != 0) {
                     this.group[_parentId].buttonMember.push(elementId)
                 }
 
                 if (isCreate == 1) {
                     db.transaction(function (context) {  
-                        context.executeSql('INSERT INTO Button (id,name,hwId,areaId,templateId,boardType,parentId) VALUES (?,?,?,?,?,?,?)',[elementId,_name,_hwId,index,templateId,boardType,_parentId]);
+                        context.executeSql('INSERT INTO Button (id,name,hwId,mode,areaId,templateId,boardType,parentId)\
+                            VALUES (?,?,?,?,?,?,?,?)',[elementId,_name,_hwId,_mode,index,templateId,boardType,_parentId]);
                     })
                 }
             },
-            putLed(index, elementId, _name, _hwId, _segmentId, isCreate,_parentId) {
+            putLed(index, elementId, _name, _hwId, _mappingName, _mode, _segmentId, isCreate,_parentId) {
                 let templateId = this.templateId
                 let boardType = this.boardType
                
@@ -973,7 +1142,9 @@
                     name: _name,
                     hwId: _hwId,
                     segmentId: _segmentId,
-                    parentId:_parentId
+                    parentId:_parentId,
+                    mappingName: _mappingName,
+                    mode: _mode
                 }
                 // 把新建led添加至给定的segment组别中
                 if(_segmentId!=0){
@@ -985,11 +1156,12 @@
                 //将LED插入数据库
                 if (isCreate == 1) {
                     db.transaction(function (context) {  
-                        context.executeSql('INSERT INTO LED (id,name,hwId,areaId,segmentId,templateId,boardType,parentId) VALUES (?,?,?,?,?,?,?,?)',[elementId,_name,_hwId,index,_segmentId,templateId,boardType,_parentId]);
+                        context.executeSql('INSERT INTO LED (id,name,hwId,mappingName,mode,areaId,segmentId,templateId,boardType,parentId)\
+                            VALUES (?,?,?,?,?,?,?,?,?,?)',[elementId,_name,_hwId,_mappingName,_mode,index,_segmentId,templateId,boardType,_parentId]);
                     });
                 }
             },
-            putSegment(segmentId, _name, isCreate,_parentId, _groupId) {
+            putSegment(segmentId, _name, _mappingName, _mode, isCreate,_parentId, _groupId) {
                 let templateId = this.templateId
                 let boardType = this.boardType
                 // 新建一个segment组别
@@ -998,7 +1170,9 @@
                     ledMember: [],
                     segmentMember: [],
                     parentId:_parentId,
-                    groupId: _groupId
+                    groupId: _groupId,
+                    mappingName: _mappingName,
+                    mode: _mode
                 }
                 if (_groupId != 0) {
                     this.group[_groupId].segmentMember.push(segmentId)
@@ -1006,7 +1180,8 @@
                 
                 if (isCreate == 1) {
                     db.transaction(function (context) {  
-                        context.executeSql('INSERT INTO Segment (id,name,templateId,boardType,parentId, groupId) VALUES (?,?,?,?,?,?)',[segmentId,_name,templateId,boardType,_parentId,_groupId]);
+                        context.executeSql('INSERT INTO Segment (id,name,mappingName,mode,templateId,boardType,parentId, groupId)\
+                            VALUES (?,?,?,?,?,?,?,?)',[segmentId,_name,_mappingName,_mode,templateId,boardType,_parentId,_groupId]);
                     });
                 }
                 
@@ -1040,7 +1215,89 @@
                 }
                 this.dialogGroupVisible = true
             },
-            //点击编辑group
+            // 设置group mapping中组件的相关属性
+            groupMappingEdit() {
+                this.groupAttribute = {
+                    button: {},
+                    led: {},
+                    segment: {}
+                }
+                let buttonMember = this.group[this.groupId].buttonMember
+                let ledMember = this.group[this.groupId].ledMember
+                let segmentMember = this.group[this.groupId].segmentMember
+
+              for (let i = 0 ; i < buttonMember.length ; ++i) {
+                this.$set(this.groupAttribute['button'], buttonMember[i], {})
+                let targetButton = this.groupAttribute['button'][buttonMember[i]]
+                this.$set(targetButton, 'mode', this.button[buttonMember[i]].mode)
+              }
+              for (let i = 0 ; i < ledMember.length ; ++i) {
+                this.$set(this.groupAttribute['led'], ledMember[i], {})
+                let targetLed = this.groupAttribute['led'][ledMember[i]]
+                this.$set(targetLed, 'mappingName', this.led[ledMember[i]].mappingName)
+                this.$set(targetLed, 'mode', this.led[ledMember[i]].mode)
+              }
+              for (let i = 0 ; i < segmentMember.length ; ++i) {
+                this.$set(this.groupAttribute['segment'], segmentMember[i], {})
+                let targetSegment = this.groupAttribute['segment'][segmentMember[i]]
+                this.$set(targetSegment, 'mappingName', this.segment[segmentMember[i]].mappingName)
+                this.$set(targetSegment, 'mode', this.segment[segmentMember[i]].mode)
+              }
+              this.dialogGroupAttributeVisible=true
+            },
+            submitMapping() {
+                let buttonMember = []
+                let ledMember = []
+                let segmentMember = []
+
+                //  更改所有组件的mappingName和mode
+                for (let buttonId in this.groupAttribute.button) {
+                    this.button[buttonId].mode = this.groupAttribute.button[buttonId].mode
+                    buttonMember.push(buttonId)
+                }
+                for (let ledId in this.groupAttribute.led) {
+                    this.led[ledId].mappingName = this.groupAttribute.led[ledId].mappingName
+                    this.led[ledId].mode = this.groupAttribute.led[ledId].mode
+                    ledMember.push(ledId)
+                }
+                for (let segmentId in this.groupAttribute.segment) {
+                    this.segment[segmentId].mappingName = this.groupAttribute.segment[segmentId].mappingName
+                    this.segment[segmentId].mode = this.groupAttribute.segment[segmentId].mode
+                    segmentMember.push(segmentId)
+                }
+
+                let _this = this
+                db.transaction(function (context) {
+                    for (let i in buttonMember) {
+                        context.executeSql('UPDATE Button SET mode=? WHERE id =?',
+                            [_this.button[buttonMember[i]].mode, buttonMember[i]]);
+                    }
+                    for (let i in ledMember) {
+                        context.executeSql('UPDATE LED SET mappingName=?, mode=? WHERE id =?',
+                            [_this.led[ledMember[i]].mappingName, _this.led[ledMember[i]].mode, ledMember[i]]);
+                    }      
+                    for (let i in segmentMember) {
+                        context.executeSql('UPDATE Segment SET mappingName=?, mode=? WHERE id=?',
+                            [_this.segment[segmentMember[i]].mappingName, _this.segment[segmentMember[i]].mode, segmentMember[i]])
+                    }
+                })
+
+
+                this.groupAttribute = {
+                    button: {},
+                    led: {},
+                    segment: {}
+                }
+
+                this.$message({
+                    message: 'Success!',
+                    type: 'success',
+                    duration: 1500
+                });
+
+                this.dialogGroupAttributeVisible=false;
+            },
+            //绑定编辑group成员的穿梭框数据
             groupEdit() {
                 let groupIdTmp = this.groupId;
                 this.availableElements =[];
@@ -1093,21 +1350,26 @@
                 
                 this.dialogEditGroupVisible = true;
             },
-            submitGroup(){
+            submitGroupEdit(){
                 let groupIdTmp = this.groupId;
                 let targetGroup = this.group[groupIdTmp]
 
                 // 重置所有原始子组件的parentId
                 for (let i in this.group[this.groupId].buttonMember) {
                     this.button[targetGroup.buttonMember[i]].parentId = 0
+                    this.button[targetGroup.buttonMember[i]].mode = ''
                 }
 
                 for (let i in this.group[this.groupId].ledMember) {
                     this.led[targetGroup.ledMember[i]].parentId = 0
+                    this.led[targetGroup.ledMember[i]].mappingName = ''
+                    this.led[targetGroup.ledMember[i]].mode = ''
                 }
 
                 for (let i in this.group[this.groupId].segmentMember) {
                     this.segment[targetGroup.segmentMember[i]].groupId = 0
+                    this.segment[targetGroup.segmentMember[i]].mappingName = ''
+                    this.segment[targetGroup.segmentMember[i]].mode = ''
                 }
 
                 targetGroup.buttonMember = []
@@ -1121,12 +1383,17 @@
                     let elementId = element.split(':')[1]
                     if (elementName == 'Button') {
                         this.button[elementId].parentId = groupIdTmp
+                        this.button[elementId].mode = ''
                         targetGroup.buttonMember.push(elementId)
                     } else if (elementName == 'LED') {
                         this.led[elementId].parentId = groupIdTmp
+                        this.led[elementId].mappingName = ''
+                        this.led[elementId].mode = ''
                         targetGroup.ledMember.push(elementId)
                     } else {
                         this.segment[elementId].groupId = groupIdTmp
+                        this.segment[elementId].mappingName = ''
+                        this.segment[elementId].mode = ''
                         targetGroup.segmentMember.push(elementId)
                     }
                 }
@@ -1135,17 +1402,17 @@
                 let segmentChild = targetGroup.segmentMember
 
                 db.transaction(function (context) {
-                    context.executeSql('UPDATE Button SET parentId = 0 WHERE parentId = ?', [groupIdTmp])
-                    context.executeSql('UPDATE LED SET parentId = 0 WHERE parentId = ?', [groupIdTmp])
-                    context.executeSql('UPDATE Segment SET groupId = 0 WHERE groupId = ?', [groupIdTmp])
+                    context.executeSql('UPDATE Button SET parentId = 0, mode=NULL WHERE parentId = ?', [groupIdTmp])
+                    context.executeSql('UPDATE LED SET parentId = 0, mappingName=NULL, mode=NULL WHERE parentId = ?', [groupIdTmp])
+                    context.executeSql('UPDATE Segment SET groupId = 0, mappingName=NULL, mode=NULL WHERE groupId = ?', [groupIdTmp])
                     for (let i in buttonChild) {
-                        context.executeSql('UPDATE Button SET parentId=? WHERE id =?',[groupIdTmp,buttonChild[i]]);
+                        context.executeSql('UPDATE Button SET parentId=?, mode=NULL WHERE id =?',[groupIdTmp,buttonChild[i]]);
                     }
                     for (let i in ledChild) {
-                        context.executeSql('UPDATE LED SET parentId=? WHERE id =?',[groupIdTmp,ledChild[i]]);
+                        context.executeSql('UPDATE LED SET parentId=?, mappingName=NULL, mode=NULL WHERE id =?',[groupIdTmp,ledChild[i]]);
                     }      
                     for (let i in segmentChild) {
-                        context.executeSql('UPDATE Segment SET groupId=? WHERE id=?',[groupIdTmp,segmentChild[i]])
+                        context.executeSql('UPDATE Segment SET groupId=?, mappingName=NULL, mode=NULL WHERE id=?',[groupIdTmp,segmentChild[i]])
                     }
                 })
                 
@@ -1167,12 +1434,17 @@
                 // 重置所有子组件的parentId
                 for (let i in buttonMember) {
                     this.button[buttonMember[i]].parentId = 0
+                    this.button[buttonMember[i]].mode = ''
                 }
                 for (let i in ledMember) {
                     this.led[ledMember[i]].parentId = 0
+                    this.led[ledMember[i]].mappingName = ''
+                    this.led[ledMember[i]].mode = ''
                 }
                 for (let i in segmentMember) {
                     this.segment[segmentMember[i]].groupId = 0
+                    this.segment[segmentMember[i]].mappingName = ''
+                    this.segment[segmentMember[i]].mode = ''
                 }
 
                 // 删除group和groupList中的对应项
@@ -1186,11 +1458,12 @@
 
                 db.transaction(function (context) { 
                     context.executeSql('DELETE FROM Groups WHERE id = ?',[groupIdTmp]);
-                    context.executeSql('UPDATE Button SET parentId=0 WHERE parentId =?',[groupIdTmp]);
-                    context.executeSql('UPDATE LED SET parentId=0 WHERE parentId =?',[groupIdTmp]);
-                    context.executeSql('UPDATE Segment SET groupId=0 WHERE groupId=?', [groupIdTmp])
+                    context.executeSql('UPDATE Button SET parentId=0, mode=NULL WHERE parentId =?',[groupIdTmp]);
+                    context.executeSql('UPDATE LED SET parentId=0, mappingName=NULL, mode=NULL WHERE parentId =?',[groupIdTmp]);
+                    context.executeSql('UPDATE Segment SET groupId=0, mappingName=NULL, mode=NULL WHERE groupId=?', [groupIdTmp])
                 });
                 this.dialogDeleteGroupVisible = false;
+
                 this.$message({
                     message: 'Success!',
                     type: 'success',
@@ -1198,7 +1471,6 @@
                 });
 
             },
-
             // 打开管理Segment弹窗前进行的初始化工作
             initSegmentManagement() {
                 this.segmentList = []
@@ -1311,7 +1583,8 @@
                 });
             },
             // 在segment管理弹窗中的删除功能
-            deleteSegment(id) {
+            deleteSegment() {
+                let id = this.manageSegmentId
                 // 将孩子元素(led以及segment)的segmentParentId都置为默认值
                 for (let i = 0 ; i < this.segment[id].ledMember.length ; ++i) {
                     let childLedId = this.segment[id].ledMember[i]
@@ -1380,7 +1653,6 @@
                         this.$set(targetLed, 'segmentId', this.led[targetLedId].segmentId)
                         this.$set(targetLed, 'parentId', this.led[targetLedId].parentId)
                         this.$set(targetLed, 'toDelete', 0)
-                        this.$set(targetLed, 'toAlterSegment', 0)
                         this.$set(targetLed, 'toAlterGroup', 0)
                     }
                     this.dialogFormVisible = true
@@ -1406,13 +1678,13 @@
                         if (targetButton[buttonId].toDelete==1) {
                             // 删除指定的button
                             context.executeSql('DELETE FROM Button WHERE id =?',[buttonId]);
-                            
                         } else {
                             if (targetButton[buttonId].toAlterGroup == 1) {
-                                context.executeSql('UPDATE Button SET parentId=? WHERE id=?',[targetButton[buttonId].parentId, buttonId]);
+                                context.executeSql('UPDATE Button SET parentId=?,mode=? WHERE id=?',[targetButton[buttonId].parentId,'',buttonId]);
                             }
+                            context.executeSql('UPDATE Button SET name=?,hwId=? WHERE id =?',[targetButton[buttonId].name,targetButton[buttonId].hwId,buttonId]);
                         }
-                        context.executeSql('UPDATE Button SET name=?,hwId=? WHERE id =?',[targetButton[buttonId].name,targetButton[buttonId].hwId,buttonId]);
+                        
                     }
                 })
 
@@ -1424,16 +1696,9 @@
                             context.executeSql('DELETE FROM LED WHERE id =?',[ledId]);
                         } else {
                             // 修改led信息
-                            
-                            if (targetLed[ledId].toAlterSegment == 1) {
-                                // 更改led分组
-                                context.executeSql('UPDATE LED SET segmentId=? WHERE id=?',[targetLed[ledId].segmentId, ledId]);
-                            }
-
                             if (targetLed[ledId].toAlterGroup == 1) {
-                                context.executeSql('UPDATE LED SET parentId=? WHERE id=?',[targetLed[ledId].parentId, ledId]);
+                                context.executeSql('UPDATE LED SET parentId=?,mappingName=?,mode=? WHERE id=?',[targetLed[ledId].parentId,'','', ledId]);
                             }
-
                             context.executeSql('UPDATE LED SET name=?,hwId=?,segmentId=? WHERE id =?',[targetLed[ledId].name,targetLed[ledId].hwId,targetLed[ledId].segmentId,ledId]);
                         }
                     }
@@ -1443,6 +1708,10 @@
                     type: 'success',
                     duration: 1500
                 });
+                this.targetGridElement = {
+                    button: {},
+                    led: {}
+                }
                 this.loadBoard()
                 this.dialogFormVisible = false
             },
@@ -1533,7 +1802,7 @@
         height:88px;
         /*border:1px solid #aaaaaa;*/
         background-color: #8CFE90;
-        margin: 10px;
+        margin: 17px;
     }
 
     #LED {
@@ -1543,10 +1812,11 @@
     }
 
     #segment {
-        margin: 10px;
+        margin: 15px;
         width: 88px;
         height:150px;
         /*border:1px solid #aaaaaa;*/
     }
 
 </style>
+
