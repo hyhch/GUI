@@ -61,10 +61,10 @@ var db = openDatabase('BSHdb', '1.0', 'Test DB', 2 * 1024 * 1024);
         db.transaction(function (context) {  
           //  tx.executeSql('CREATE TABLE IF NOT EXISTS Temp ("id" INTEGER NOT NULL,"type" INTEGER,"areaId" INTEGER,"elementId" INTEGER,PRIMARY KEY ("id"))');
           context.executeSql('CREATE TABLE IF NOT EXISTS TemplateList ("id" INTEGER NOT NULL,"name" TEXT,PRIMARY KEY ("id"))');
-          context.executeSql('CREATE TABLE IF NOT EXISTS Button ("id" INTEGER NOT NULL,"name" TEXT,"hwId" TEXT,"areaId" INTEGER,"templateId" INTEGER,"boardType" INTEGER,"parentId" INTEGER,PRIMARY KEY ("id"))');
-          context.executeSql('CREATE TABLE IF NOT EXISTS LED ("id" INTEGER NOT NULL,"name" TEXT,"hwId" TEXT,"areaId" INTEGER,"segmentId" INTEGER,"templateId" INTEGER,"boardType" INTEGER,"parentId" INTEGER,PRIMARY KEY ("id"))');
+          context.executeSql('CREATE TABLE IF NOT EXISTS Button ("id" INTEGER NOT NULL,"name" TEXT,"hwId" TEXT,"mode" TEXT,"areaId" INTEGER,"templateId" INTEGER,"boardType" INTEGER,"parentId" INTEGER,PRIMARY KEY ("id"))');
+          context.executeSql('CREATE TABLE IF NOT EXISTS LED ("id" INTEGER NOT NULL,"name" TEXT,"hwId" TEXT,"mappingName" TEXT,"mode" TEXT,"areaId" INTEGER,"segmentId" INTEGER,"templateId" INTEGER,"boardType" INTEGER,"parentId" INTEGER,PRIMARY KEY ("id"))');
           context.executeSql('CREATE TABLE IF NOT EXISTS ButtonMapping ("id" INTEGER NOT NULL,"name" TEXT,"unitname" TEXT,"buttonMode" TEXT,"templateId" INTEGER,"buttonId" INTEGER,PRIMARY KEY ("id"))');
-          context.executeSql('CREATE TABLE IF NOT EXISTS Segment ("id" INTEGER NOT NULL,"name" TEXT,"templateId" INTEGER,"boardType" INTEGER,"parentId" INTEGER, "groupId" INTEGER, PRIMARY KEY ("id"))');
+          context.executeSql('CREATE TABLE IF NOT EXISTS Segment ("id" INTEGER NOT NULL,"name" TEXT,"mappingName" TEXT,"mode" TEXT,"templateId" INTEGER,"boardType" INTEGER,"parentId" INTEGER, "groupId" INTEGER, PRIMARY KEY ("id"))');
           context.executeSql('CREATE TABLE IF NOT EXISTS Groups ("id" INTEGER NOT NULL,"name" TEXT,"templateId" INTEGER,"boardType" INTEGER,PRIMARY KEY ("id"))');
           context.executeSql('SELECT * FROM TemplateList',[],function(context,results){
             let len = results.rows.length;
@@ -97,4 +97,5 @@ var db = openDatabase('BSHdb', '1.0', 'Test DB', 2 * 1024 * 1024);
 	border-right:0!important;
 }
 </style>
+
 
